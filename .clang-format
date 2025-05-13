@@ -1,0 +1,27 @@
+---
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+AlignArrayOfStructures: Left
+AllowShortFunctionsOnASingleLine: All
+AllowShortLambdasOnASingleLine: All
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBinaryOperators: NonAssignment
+Cpp11BracedListStyle: false
+ColumnLimit:     120
+FixNamespaceComments: true
+IncludeBlocks:   Preserve
+IndentPPDirectives: BeforeHash
+IndentWidth:     4
+IndentWrappedFunctionNames: true
+InsertNewlineAtEOF: true
+NamespaceIndentation: Inner
+PointerAlignment: Left
+SeparateDefinitionBlocks: Always
+SortIncludes: false
+SpaceAfterTemplateKeyword: false
+Standard: Cpp03
+SpacesInAngles: true
+TabWidth: 4
+UseTab: Never
