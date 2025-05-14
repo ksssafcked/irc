@@ -1,13 +1,17 @@
 #include <iostream>
 #include <vector>
+#include <cstdlib>
+#include "Server.hpp"
 
-template< typename T >
-struct Burek {
-    T value;
-};
+int main(int argc, char** argv) {
+    if (argc != 3) {
+        // error print err
+        return 1;
+    }
 
-int main() {
-    Burek< std::vector< int > > var;
-    std::cout << "woohoo burek\n";
-    return 0;
+    std::string port = argv[1];
+    std::string password = argv[2];
+
+    Server server(port, password);
+    server.run();
 }
