@@ -1,34 +1,22 @@
 #include "Server.hpp"
 
-Server::Server(std::string port, const std::string& password) : _port(port), _password(password), _user_nb(1) {}
+Server::Server(std::string port, const std::string& password) : _port(port), _password(password) {}
 
 Server::~Server() {}
 
-/*void Server::add_to_pfds(struct pollfd* pfds[], int newfd, int* fd_count, int* fd_size) {
-    // If we don't have room, add more space in the pfds array
-    if (*fd_count == *fd_size) {
-        *fd_size *= 2; // Double it
-
-        *pfds = realloc(*pfds, sizeof(**pfds) * (*fd_size));
-    }
-
-    (*pfds)[*fd_count].fd = newfd;
-    (*pfds)[*fd_count].events = POLLIN; // Check ready-to-read
-    (*pfds)[*fd_count].revents = 0;
-
-    (*fd_count)++;
-}*/
+std::vector< struct pollfd >::iterator Server::addClient(struct pollfd newClient) {
+    this->_clients.push_back(newClient);
+    return (this->_clients.begin());
+}
 
 std::vector< struct pollfd >::iterator Server::deleteClient(std::vector< struct pollfd >::iterator it) {
     close(it->fd);
     it = this->_clients.erase(it);
-    this->_user_nb--;
     return it;
 }
 
-int Server::open_socket() {
-    int listener; // Listening socket descriptor
-    int yes = 1;  // For setsockopt() SO_REUSEADDR, below
+void Server::open_socket() {
+    int yes = 1; // For setsockopt() SO_REUSEADDR, below
     int rv;
 
     struct addrinfo hints, *ai, *p;
@@ -39,20 +27,20 @@ int Server::open_socket() {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
     if ((rv = getaddrinfo(NULL, this->_port.c_str(), &hints, &ai)) != 0) {
-        exit(1);
+        throw std::exception();
     }
 
     for (p = ai; p != NULL; p = p->ai_next) {
-        listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-        if (listener < 0) {
+        this->_listener_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+        if (this->_listener_fd < 0) {
             continue;
         }
 
         // Lose the pesky "address already in use" error message
-        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+        setsockopt(this->_listener_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
 
-        if (bind(listener, p->ai_addr, p->ai_addrlen) < 0) {
-            close(listener);
+        if (bind(this->_listener_fd, p->ai_addr, p->ai_addrlen) < 0) {
+            close(this->_listener_fd);
             continue;
         }
 
@@ -61,30 +49,28 @@ int Server::open_socket() {
 
     // If we got here, it means we didn't get bound
     if (p == NULL) {
-        return -1;
+        throw std::exception();
     }
     freeaddrinfo(ai); // All done with this
 
     // Listen
-    if (listen(listener, 10) == -1) {
-        return -1;
+    if (listen(this->_listener_fd, 10) == -1) {
+        throw std::exception();
     }
-
-    return listener;
 }
 
 void Server::run() {
 
     struct sockaddr_storage remoteaddr; // Client address
     socklen_t addrlen;
-    int listener = this->open_socket();
-    struct pollfd p;
-    if (listener == -1)
+    try {
+        this->open_socket();
+    } catch (std::exception& e) {
         std::cout << "Big err" << std::endl;
-    else {
-        std::cout << "Socket opened" << std::endl;
+        return;
     }
-    p.fd = listener;
+    struct pollfd p;
+    p.fd = this->_listener_fd;
     p.events = POLLIN;
     p.revents = 0;
     this->_clients.push_back(p);
@@ -100,23 +86,21 @@ void Server::run() {
             continue;
         }
         char buf[512];
-        for (std::vector< struct pollfd >::iterator it = _clients.begin(); it != _clients.end(); it++) {
+        for (std::vector< struct pollfd >::iterator it = _clients.begin(); it != _clients.end();) {
             if (it->revents & (POLLIN | POLLHUP)) {
-                if (it->fd == listener) {
+                if (it->fd == this->_listener_fd) {
 
                     std::cout << "Something happened!" << std::endl;
                     addrlen = sizeof(remoteaddr);
                     struct pollfd po;
-                    po.fd = accept(listener, (struct sockaddr*)&remoteaddr, &addrlen);
+                    po.fd = accept(this->_listener_fd, (struct sockaddr*)&remoteaddr, &addrlen);
                     po.events = POLLIN;
                     po.revents = 0;
                     if (po.fd == -1) {
                         std::cerr << "Err" << std::endl;
                     } else {
-                        _clients.push_back(po);
-                        it = _clients.begin();
+                        it = this->addClient(po);
                         std::cout << "New client connected with fd: " << po.fd << std::endl;
-                        continue;
                     }
                 } else {
                     std::cout << "New Message ! " << std::endl;
@@ -126,7 +110,7 @@ void Server::run() {
                         std::cout << "Something happened n2!" << std::endl;
                         std::cout << nbytes << std::endl;
                         for (std::vector< struct pollfd >::iterator ti = _clients.begin(); ti != _clients.end(); ti++) {
-                            if (ti != it && ti->fd != listener)
+                            if (ti != it && ti->fd != this->_listener_fd)
                                 send(ti->fd, buf, nbytes, 0);
                         }
                         write(1, buf, nbytes);
@@ -137,6 +121,7 @@ void Server::run() {
                     }
                 }
             }
+            it++;
         }
     }
 }
