@@ -17,7 +17,7 @@ private:
     Server() {}
 
     std::vector< struct pollfd >::iterator deleteClient(std::vector< struct pollfd >::iterator it);
-    std::vector< struct pollfd >::iterator addClient(struct pollfd newClient);
+    std::vector< struct pollfd >::iterator addClient();
 
     std::string _port;
     std::string _password;

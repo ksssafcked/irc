@@ -4,14 +4,30 @@ Server::Server(std::string port, const std::string& password) : _port(port), _pa
 
 Server::~Server() {}
 
-std::vector< struct pollfd >::iterator Server::addClient(struct pollfd newClient) {
-    this->_clients.push_back(newClient);
+std::vector< struct pollfd >::iterator Server::addClient() {
+
+    struct sockaddr_storage remoteaddr;
+    socklen_t addrlen;
+    struct pollfd newClient;
+
+    std::cout << "Something happened!" << std::endl;
+    addrlen = sizeof(remoteaddr);
+    newClient.fd = accept(this->_listener_fd, (struct sockaddr*)&remoteaddr, &addrlen);
+    newClient.events = POLLIN | POLLOUT;
+    newClient.revents = 0;
+    if (newClient.fd == -1) {
+        std::cerr << "Err" << std::endl;
+    } else {
+        std::cout << "New client connected with fd: " << newClient.fd << std::endl;
+        this->_clients.push_back(newClient);
+    }
     return (this->_clients.begin());
 }
 
 std::vector< struct pollfd >::iterator Server::deleteClient(std::vector< struct pollfd >::iterator it) {
     close(it->fd);
     it = this->_clients.erase(it);
+    std::cout << "Client disconnected !" << std::endl;
     return it;
 }
 
@@ -61,8 +77,6 @@ void Server::open_socket() {
 
 void Server::run() {
 
-    struct sockaddr_storage remoteaddr; // Client address
-    socklen_t addrlen;
     try {
         this->open_socket();
     } catch (std::exception& e) {
@@ -89,19 +103,7 @@ void Server::run() {
         for (std::vector< struct pollfd >::iterator it = _clients.begin(); it != _clients.end();) {
             if (it->revents & (POLLIN | POLLHUP)) {
                 if (it->fd == this->_listener_fd) {
-
-                    std::cout << "Something happened!" << std::endl;
-                    addrlen = sizeof(remoteaddr);
-                    struct pollfd po;
-                    po.fd = accept(this->_listener_fd, (struct sockaddr*)&remoteaddr, &addrlen);
-                    po.events = POLLIN;
-                    po.revents = 0;
-                    if (po.fd == -1) {
-                        std::cerr << "Err" << std::endl;
-                    } else {
-                        it = this->addClient(po);
-                        std::cout << "New client connected with fd: " << po.fd << std::endl;
-                    }
+                    this->addClient();
                 } else {
                     std::cout << "New Message ! " << std::endl;
                     int nbytes = recv(it->fd, buf, sizeof buf, 0);
@@ -116,7 +118,6 @@ void Server::run() {
                         write(1, buf, nbytes);
                     } else if (!nbytes) {
                         it = this->deleteClient(it);
-                        std::cout << "End of Message" << std::endl;
                         continue;
                     }
                 }
