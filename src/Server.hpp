@@ -12,12 +12,18 @@
 #include <vector>
 #include <exception>
 
+#ifndef DEBUG
+    #define DEBUG 0
+#endif
+
 class Server {
 private:
     Server() {}
 
     std::vector< struct pollfd >::iterator deleteClient(std::vector< struct pollfd >::iterator it);
     std::vector< struct pollfd >::iterator addClient();
+    bool pollClients();
+    void checkClientsData();
 
     std::string _port;
     std::string _password;

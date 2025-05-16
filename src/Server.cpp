@@ -32,12 +32,9 @@ std::vector< struct pollfd >::iterator Server::deleteClient(std::vector< struct 
 }
 
 void Server::open_socket() {
-    int yes = 1; // For setsockopt() SO_REUSEADDR, below
+    int yes = 1;
     int rv;
-
     struct addrinfo hints, *ai, *p;
-
-    // Get us a socket and bind it
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -51,31 +48,68 @@ void Server::open_socket() {
         if (this->_listener_fd < 0) {
             continue;
         }
-
-        // Lose the pesky "address already in use" error message
         setsockopt(this->_listener_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-
         if (bind(this->_listener_fd, p->ai_addr, p->ai_addrlen) < 0) {
             close(this->_listener_fd);
             continue;
         }
-
         break;
     }
-
-    // If we got here, it means we didn't get bound
+    freeaddrinfo(ai);
     if (p == NULL) {
         throw std::exception();
     }
-    freeaddrinfo(ai); // All done with this
-
-    // Listen
     if (listen(this->_listener_fd, 10) == -1) {
         throw std::exception();
     }
 }
 
+bool Server::pollClients() {
+    int poll_count = poll(this->_clients.data(), this->_clients.size(), -1);
+    if (poll_count < 0) {
+        std::cerr << "Poll Failed !" << std::endl;
+        return false;
+    }
+    if (poll_count == 0) {
+        std::cout << "No data changes !" << std::endl;
+        return false;
+    }
+    return true;
+}
+
+void Server::checkClientsData() {
+    char buf[512];
+    for (std::vector< struct pollfd >::iterator it = _clients.begin(); it != _clients.end();) {
+        if (it->revents & (POLLIN | POLLHUP)) {
+            if (it->fd == this->_listener_fd) {
+                it = this->addClient();
+            } else {
+                int nbytes = recv(it->fd, buf, sizeof buf, 0);
+                if (DEBUG) {
+                    std::cout << "New Message ! " << std::endl;
+                    std::cout << "Bytes read: " << nbytes << std::endl;
+                    std::cout << "Fd: " << it->fd << std::endl;
+                }
+                if (nbytes > 0) {
+                    std::cout << "Something happened n2!" << std::endl;
+                    std::cout << nbytes << std::endl;
+                    for (std::vector< struct pollfd >::iterator ti = _clients.begin(); ti != _clients.end(); ti++) {
+                        if (ti != it && ti->fd != this->_listener_fd)
+                            send(ti->fd, buf, nbytes, 0);
+                    }
+                    write(1, buf, nbytes);
+                } else if (!nbytes) {
+                    it = this->deleteClient(it);
+                    continue;
+                }
+            }
+        }
+        it++;
+    }
+}
+
 void Server::run() {
+    struct pollfd p;
 
     try {
         this->open_socket();
@@ -83,46 +117,13 @@ void Server::run() {
         std::cout << "Big err" << std::endl;
         return;
     }
-    struct pollfd p;
     p.fd = this->_listener_fd;
     p.events = POLLIN;
     p.revents = 0;
     this->_clients.push_back(p);
     for (;;) {
-        int poll_count = poll(this->_clients.data(), this->_clients.size(), -1);
-        std::cout << "Poll:" << poll_count << std::endl;
-        if (poll_count < 0) {
-            std::cerr << "Poll Failed !" << std::endl;
+        if (!this->pollClients())
             continue;
-        }
-        if (poll_count == 0) {
-            std::cout << "No data changes !" << std::endl;
-            continue;
-        }
-        char buf[512];
-        for (std::vector< struct pollfd >::iterator it = _clients.begin(); it != _clients.end();) {
-            if (it->revents & (POLLIN | POLLHUP)) {
-                if (it->fd == this->_listener_fd) {
-                    this->addClient();
-                } else {
-                    std::cout << "New Message ! " << std::endl;
-                    int nbytes = recv(it->fd, buf, sizeof buf, 0);
-                    std::cout << "Bytes read: " << nbytes << std::endl;
-                    if (nbytes > 0) {
-                        std::cout << "Something happened n2!" << std::endl;
-                        std::cout << nbytes << std::endl;
-                        for (std::vector< struct pollfd >::iterator ti = _clients.begin(); ti != _clients.end(); ti++) {
-                            if (ti != it && ti->fd != this->_listener_fd)
-                                send(ti->fd, buf, nbytes, 0);
-                        }
-                        write(1, buf, nbytes);
-                    } else if (!nbytes) {
-                        it = this->deleteClient(it);
-                        continue;
-                    }
-                }
-            }
-            it++;
-        }
+        this->checkClientsData();
     }
 }

@@ -8,10 +8,9 @@ ANSI_RESET := \033[0m
 # Compiler
 CXX := c++
 
-CXXFLAGS := -std=c++98
+CXXFLAGS = -std=c++98
 CXXFLAGS += -Wall -Wextra -Werror
 CXXFLAGS += -g
-# CFLAGS += -fsanitize=address
 
 # Project
 PROJ_NAME := ircserv
@@ -27,6 +26,9 @@ OBJS := $(SRCS:src/%.cpp=$(OBJ_DIR)/%.o)
 
 # Rules
 all: $(NAME)
+
+debug: CXXFLAGS += -DDEBUG=1
+debug: $(NAME)
 
 $(NAME): $(OBJS)
 	@mkdir -p $(BIN_DIR)
