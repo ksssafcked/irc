@@ -20,7 +20,7 @@ OBJ_DIR := $(BUILD_DIR)/obj
 
 NAME := $(BIN_DIR)/$(PROJ_NAME)
 
-SRCS := src/main.cpp src/Server.cpp src/Client.cpp
+SRCS := src/main.cpp src/Server.cpp src/Client.cpp src/Common.cpp
 
 OBJS := $(SRCS:src/%.cpp=$(OBJ_DIR)/%.o)
 

@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Common.hpp"
 
 #include <algorithm>
 #include <unistd.h>
@@ -7,8 +8,6 @@
 #include <sys/socket.h>
 #include <iostream>
 #include <csignal>
-
-#include "Common.hpp"
 
 namespace utils {
 
@@ -188,17 +187,9 @@ void Server::handle_client_input(ClientIterator& client) {
     }
 
     // build up the current message (https://modern.ircdocs.horse/#message-format)
-    client->current_msg += std::string(buffer, bytes_read);
+    client->message += std::string(buffer, bytes_read);
 
-    // Look for the "\r\n" sequence to begin parsing the command
-    size_t delimiter = client->current_msg.find("\r\n");
-    if (delimiter == std::string::npos) {
-        return;
+    if (client->is_message_complete()) {
+        client->process_message();
     }
-
-    // TODO: parse command
-    std::cout << ANSI_CYAN << "[debug][server]: parsing client message: [" << client->current_msg << "]\n"
-              << ANSI_RESET;
-
-    client->current_msg.clear();
 }

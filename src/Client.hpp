@@ -1,16 +1,36 @@
 #pragma once
 
 #include <string>
+#include <vector>
+
+enum TokenKind {
+    TK_WORD,
+    TK_STRING,
+    TK_NUMBER,
+    TK_SPACE,
+    TK_CHAR, // anything that is not one of the above
+};
+
+struct Token {
+    int kind;
+    std::string data;
+
+    Token(int kind, std::string data) : kind(kind), data(data) {}
+};
 
 struct Client {
     int fd;
     size_t poll_index;
+    bool registered; // if the client is fully connected or not
 
-    // data that the client sent to the server is stored here
-    std::string current_msg;
+    std::string message;
+    std::string response;
 
-    // if the client is fully connected or not
-    bool registered;
+    typedef std::vector< Token >::const_iterator TokenIterator;
 
-    std::string username;
+    bool is_message_complete();
+    void process_message();
+
+private:
+    bool tokenize_message(std::vector< Token >& tokens);
 };

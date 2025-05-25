@@ -15,6 +15,11 @@
 
 namespace utils {
 
+bool is_space(char c);
+bool is_alpha(char c);
+bool is_digit(char c);
+bool is_alphanumeric(char c);
+
 template< typename T >
 T str_to_value(std::string str) {
     T value;
