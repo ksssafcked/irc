@@ -6,6 +6,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <iostream>
+#include <csignal>
+
+#include "Common.hpp"
 
 namespace utils {
 
@@ -27,12 +30,18 @@ Server::Server(unsigned short port, const std::string& password)
         return;
     }
 
-    std::cout << "[info][server]: listening on port " << port << "\n";
+    if (!this->setup_signal()) {
+        return;
+    }
+
+    std::cout << "[info][server]: listening on port " << port << "\n" << ANSI_RESET;
 
     _initialized = true;
 }
 
 Server::~Server() {
+    std::cout << "[info][server]: shutdown\n";
+
     if (this->_socket) {
         close(this->_socket);
     }
@@ -40,7 +49,7 @@ Server::~Server() {
 
 void Server::run() {
     if (!_initialized) {
-        std::cerr << "[error][server]: failed to run because it is not initialized!\n";
+        std::cerr << ANSI_RED << "[error][server]: failed to run because it is not initialized!\n" << ANSI_RESET;
         return;
     }
 
@@ -50,7 +59,7 @@ void Server::run() {
     while (Server::running) {
         // check if anything happened
         if (poll(_fds.data(), _fds.size(), 0) < 0) {
-            std::cerr << "[error][server]: failed to poll!\n";
+            std::cerr << ANSI_RED << "[error][server]: failed to poll!\n" << ANSI_RESET;
             return;
         }
 
@@ -79,13 +88,13 @@ void Server::run() {
 bool Server::setup_socket() {
     this->_socket = socket(PF_INET, SOCK_STREAM, 0);
     if (this->_socket < 0) {
-        std::cerr << "[error][server]: socket() failed!\n";
+        std::cerr << ANSI_RED << "[error][server]: socket() failed!\n" << ANSI_RESET;
         return false;
     }
 
     int opt = 1;
     if (setsockopt(this->_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-        std::cerr << "[error][server]: setsockopt() failed()!\n";
+        std::cerr << ANSI_RED << "[error][server]: setsockopt() failed()!\n" << ANSI_RESET;
         return false;
     }
 
@@ -95,16 +104,35 @@ bool Server::setup_socket() {
     server_addr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-        std::cerr << "[error][server]: bin() failed!\n";
+        std::cerr << ANSI_RED << "[error][server]: bin() failed!\n" << ANSI_RESET;
         return false;
     }
 
     if (listen(_socket, 10) == -1) {
-        std::cerr << "[error][server]: listen() failed!\n";
+        std::cerr << ANSI_RED << "[error][server]: listen() failed!\n" << ANSI_RESET;
         return false;
     }
 
     this->add_fd_to_poll(_socket, POLLIN);
+
+    return true;
+}
+
+static void sigint_handler(int signum) {
+    if (signum == SIGINT) {
+        std::cout << "[info][server]: received interrupt signal\n";
+        Server::running = false;
+    }
+}
+
+bool Server::setup_signal() {
+    struct sigaction sa;
+    sa.sa_handler = sigint_handler;
+    sa.sa_flags = SA_RESTART;
+
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+        return false;
+    }
 
     return true;
 }
@@ -121,7 +149,7 @@ void Server::add_fd_to_poll(int fd, int events) {
 bool Server::accept_client() {
     int new_fd = accept(_socket, 0, 0);
     if (new_fd < 0) {
-        std::cerr << "[error][server]: failed to accept client!\n";
+        std::cerr << ANSI_RED << "[error][server]: failed to accept client!\n" << ANSI_RESET;
         return false;
     }
 
@@ -169,9 +197,8 @@ void Server::handle_client_input(ClientIterator& client) {
     }
 
     // TODO: parse command
-    std::cout << "[debug][server]: parsing client message: [\n";
-    std::cout << client->current_msg;
-    std::cout << "]\n";
+    std::cout << ANSI_CYAN << "[debug][server]: parsing client message: [" << client->current_msg << "]\n"
+              << ANSI_RESET;
 
     client->current_msg.clear();
 }

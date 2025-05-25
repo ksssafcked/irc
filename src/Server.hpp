@@ -32,6 +32,7 @@ private:
     typedef std::vector< Client >::iterator ClientIterator;
 
     bool setup_socket();
+    bool setup_signal();
     void add_fd_to_poll(int fd, int events);
 
     bool accept_client();
