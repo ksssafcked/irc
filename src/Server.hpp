@@ -1,39 +1,41 @@
 #pragma once
 
-#include <iostream>
-#include <cstdlib>
-#include <cstring>
-#include <unistd.h>
-#include <netdb.h>
-#include <sys/types.h>
-#include <string>
-#include <sys/socket.h>
 #include <poll.h>
+#include <string>
 #include <vector>
-#include <exception>
 
-#ifndef DEBUG
-    #define DEBUG 0
-#endif
+#include "Client.hpp"
 
 class Server {
 private:
     Server() {}
 
-    std::vector< struct pollfd >::iterator deleteClient(std::vector< struct pollfd >::iterator it);
-    std::vector< struct pollfd >::iterator addClient();
-    bool pollClients();
-    void checkClientsData();
-
-    std::string _port;
-    std::string _password;
-    int _listener_fd;
-    std::vector< struct pollfd > _clients;
-
 public:
-    Server(std::string port, const std::string& password);
+    Server(unsigned short port, const std::string& password);
     ~Server();
-    void add_to_pfds(struct pollfd* pfds[], int newfd, int* fd_count, int* fd_size);
-    void open_socket();
+
     void run();
+
+    static bool running;
+
+private:
+    bool _initialized;
+
+    unsigned short _port;
+    std::string _password;
+
+    int _socket;
+
+    std::vector< struct pollfd > _fds;
+    std::vector< Client > _clients;
+
+    typedef std::vector< Client >::iterator ClientIterator;
+
+    bool setup_socket();
+    void add_fd_to_poll(int fd, int events);
+
+    bool accept_client();
+    void drop_client(ClientIterator& client);
+
+    void handle_client_input(ClientIterator& client);
 };

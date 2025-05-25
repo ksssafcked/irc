@@ -1,16 +1,16 @@
 #pragma once
 
-#include <iostream>
+#include <string>
 
-class Client {
-private:
-    Client();
+struct Client {
+    int fd;
+    size_t poll_index;
 
-    int _fd;
-    std::string _username;
+    // data that the client sent to the server is stored here
+    std::string current_msg;
 
-public:
-    Client(int fd, std::string username);
-    Client(int fd);
-    ~Client();
+    // if the client is fully connected or not
+    bool registered;
+
+    std::string username;
 };

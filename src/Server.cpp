@@ -1,129 +1,177 @@
 #include "Server.hpp"
 
-Server::Server(std::string port, const std::string& password) : _port(port), _password(password) {}
+#include <algorithm>
+#include <unistd.h>
+#include <netdb.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <iostream>
 
-Server::~Server() {}
+namespace utils {
 
-std::vector< struct pollfd >::iterator Server::addClient() {
+struct FindClient {
+    int fd;
 
-    struct sockaddr_storage remoteaddr;
-    socklen_t addrlen;
-    struct pollfd newClient;
+    FindClient(int fd) : fd(fd) {}
 
-    std::cout << "Something happened!" << std::endl;
-    addrlen = sizeof(remoteaddr);
-    newClient.fd = accept(this->_listener_fd, (struct sockaddr*)&remoteaddr, &addrlen);
-    newClient.events = POLLIN | POLLOUT;
-    newClient.revents = 0;
-    if (newClient.fd == -1) {
-        std::cerr << "Err" << std::endl;
-    } else {
-        std::cout << "New client connected with fd: " << newClient.fd << std::endl;
-        this->_clients.push_back(newClient);
+    bool operator()(const Client& client) const { return client.fd == fd; }
+};
+
+} // namespace utils
+
+bool Server::running = false;
+
+Server::Server(unsigned short port, const std::string& password)
+    : _initialized(false), _port(port), _password(password) {
+    if (!this->setup_socket()) {
+        return;
     }
-    return (this->_clients.begin());
+
+    std::cout << "[info][server]: listening on port " << port << "\n";
+
+    _initialized = true;
 }
 
-std::vector< struct pollfd >::iterator Server::deleteClient(std::vector< struct pollfd >::iterator it) {
-    close(it->fd);
-    it = this->_clients.erase(it);
-    std::cout << "Client disconnected !" << std::endl;
-    return it;
-}
-
-void Server::open_socket() {
-    int yes = 1;
-    int rv;
-    struct addrinfo hints, *ai, *p;
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-    if ((rv = getaddrinfo(NULL, this->_port.c_str(), &hints, &ai)) != 0) {
-        throw std::exception();
-    }
-
-    for (p = ai; p != NULL; p = p->ai_next) {
-        this->_listener_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-        if (this->_listener_fd < 0) {
-            continue;
-        }
-        setsockopt(this->_listener_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-        if (bind(this->_listener_fd, p->ai_addr, p->ai_addrlen) < 0) {
-            close(this->_listener_fd);
-            continue;
-        }
-        break;
-    }
-    freeaddrinfo(ai);
-    if (p == NULL) {
-        throw std::exception();
-    }
-    if (listen(this->_listener_fd, 10) == -1) {
-        throw std::exception();
-    }
-}
-
-bool Server::pollClients() {
-    int poll_count = poll(this->_clients.data(), this->_clients.size(), -1);
-    if (poll_count < 0) {
-        std::cerr << "Poll Failed !" << std::endl;
-        return false;
-    }
-    if (poll_count == 0) {
-        std::cout << "No data changes !" << std::endl;
-        return false;
-    }
-    return true;
-}
-
-void Server::checkClientsData() {
-    char buf[512];
-    for (std::vector< struct pollfd >::iterator it = _clients.begin(); it != _clients.end();) {
-        if (it->revents & (POLLIN | POLLHUP)) {
-            if (it->fd == this->_listener_fd) {
-                it = this->addClient();
-            } else {
-                int nbytes = recv(it->fd, buf, sizeof buf, 0);
-                if (DEBUG) {
-                    std::cout << "New Message ! " << std::endl;
-                    std::cout << "Bytes read: " << nbytes << std::endl;
-                    std::cout << "Fd: " << it->fd << std::endl;
-                }
-                if (nbytes > 0) {
-                    std::cout << "Something happened n2!" << std::endl;
-                    std::cout << nbytes << std::endl;
-                    for (std::vector< struct pollfd >::iterator ti = _clients.begin(); ti != _clients.end(); ti++) {
-                        if (ti != it && ti->fd != this->_listener_fd)
-                            send(ti->fd, buf, nbytes, 0);
-                    }
-                    write(1, buf, nbytes);
-                } else if (!nbytes) {
-                    it = this->deleteClient(it);
-                    continue;
-                }
-            }
-        }
-        it++;
+Server::~Server() {
+    if (this->_socket) {
+        close(this->_socket);
     }
 }
 
 void Server::run() {
-    struct pollfd p;
-
-    try {
-        this->open_socket();
-    } catch (std::exception& e) {
-        std::cout << "Big err" << std::endl;
+    if (!_initialized) {
+        std::cerr << "[error][server]: failed to run because it is not initialized!\n";
         return;
     }
-    p.fd = this->_listener_fd;
-    p.events = POLLIN;
-    p.revents = 0;
-    this->_clients.push_back(p);
-    for (;;) {
-        if (!this->pollClients())
-            continue;
-        this->checkClientsData();
+
+    Server::running = true;
+
+    // TODO: signal to interrupt this
+    while (Server::running) {
+        // check if anything happened
+        if (poll(_fds.data(), _fds.size(), 0) < 0) {
+            std::cerr << "[error][server]: failed to poll!\n";
+            return;
+        }
+
+        // accept any incoming connections
+        if (_fds[0].revents & POLLIN) {
+            this->accept_client();
+        }
+
+        // handle any clients
+        for (size_t i = 1; i < _fds.size(); i++) {
+            ClientIterator client = std::find_if(_clients.begin(), _clients.end(), utils::FindClient(_fds[i].fd));
+            if (client == _clients.end()) {
+                // NOTE: should never happen
+                continue;
+            }
+
+            if (_fds[i].revents & POLLIN) {
+                handle_client_input(client);
+            }
+
+            // TODO: POLLOUT
+        }
     }
+}
+
+bool Server::setup_socket() {
+    this->_socket = socket(PF_INET, SOCK_STREAM, 0);
+    if (this->_socket < 0) {
+        std::cerr << "[error][server]: socket() failed!\n";
+        return false;
+    }
+
+    int opt = 1;
+    if (setsockopt(this->_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        std::cerr << "[error][server]: setsockopt() failed()!\n";
+        return false;
+    }
+
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(this->_port);
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+        std::cerr << "[error][server]: bin() failed!\n";
+        return false;
+    }
+
+    if (listen(_socket, 10) == -1) {
+        std::cerr << "[error][server]: listen() failed!\n";
+        return false;
+    }
+
+    this->add_fd_to_poll(_socket, POLLIN);
+
+    return true;
+}
+
+void Server::add_fd_to_poll(int fd, int events) {
+    pollfd pfd;
+    pfd.fd = fd;
+    pfd.events = events;
+    pfd.revents = 0;
+
+    _fds.push_back(pfd);
+}
+
+bool Server::accept_client() {
+    int new_fd = accept(_socket, 0, 0);
+    if (new_fd < 0) {
+        std::cerr << "[error][server]: failed to accept client!\n";
+        return false;
+    }
+
+    std::cout << "[info][server]: accepting new client (" << new_fd << ")\n";
+
+    this->add_fd_to_poll(new_fd, POLLIN | POLLOUT);
+
+    Client client;
+    client.fd = new_fd;
+    client.poll_index = this->_fds.size() - 1;
+
+    this->_clients.push_back(client);
+
+    return true;
+}
+
+void Server::drop_client(ClientIterator& client) {
+    std::cout << "[info][server]: dropping client (" << client->fd << ")\n";
+
+    close(client->fd);
+
+    this->_fds.erase(this->_fds.begin() + client->poll_index);
+    this->_clients.erase(client);
+}
+
+void Server::handle_client_input(ClientIterator& client) {
+    std::cout << "[info][server]: handling input from client (" << client->fd << ")\n";
+
+    char buffer[512];
+    ssize_t bytes_read = recv(client->fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+
+    if (bytes_read <= 0) {
+        std::cout << "[error][server]: failed to read input from client (" << client->fd << ")\n";
+        drop_client(client);
+        return;
+    }
+
+    // build up the current message (https://modern.ircdocs.horse/#message-format)
+    client->current_msg += std::string(buffer, bytes_read);
+
+    // Look for the "\r\n" sequence to begin parsing the command
+    size_t delimiter = client->current_msg.find("\r\n");
+    if (delimiter == std::string::npos) {
+        return;
+    }
+
+    // TODO: parse command
+    std::cout << "[debug][server]: parsing client message: [\n";
+    std::cout << client->current_msg;
+    std::cout << "]\n";
+
+    client->current_msg.clear();
 }
