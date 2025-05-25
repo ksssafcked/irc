@@ -47,6 +47,9 @@ fclean:
 	@echo -e "$(ANSI_GREEN)[make][$(PROJ_NAME)]:$(ANSI_RESET) cleaning $(ANSI_GREEN)build$(ANSI_RESET) files"
 	@rm -rf $(BUILD_DIR)
 
+test: re
+	@./build/bin/ircserv 6667 42
+
 re: fclean all
 
 .PHONY: all clean fclean re
