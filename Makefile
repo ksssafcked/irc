@@ -8,10 +8,9 @@ ANSI_RESET := \033[0m
 # Compiler
 CXX := c++
 
-CXXFLAGS := -std=c++98
+CXXFLAGS = -std=c++98
 CXXFLAGS += -Wall -Wextra -Werror
 CXXFLAGS += -g
-# CFLAGS += -fsanitize=address
 
 # Project
 PROJ_NAME := ircserv
@@ -21,13 +20,15 @@ OBJ_DIR := $(BUILD_DIR)/obj
 
 NAME := $(BIN_DIR)/$(PROJ_NAME)
 
-SRCS := src/main.cpp \
-		src/Server.cpp
+SRCS := src/main.cpp src/Server.cpp src/Client.cpp
 
 OBJS := $(SRCS:src/%.cpp=$(OBJ_DIR)/%.o)
 
 # Rules
 all: $(NAME)
+
+debug: CXXFLAGS += -DDEBUG=1
+debug: $(NAME)
 
 $(NAME): $(OBJS)
 	@mkdir -p $(BIN_DIR)
@@ -45,6 +46,9 @@ clean:
 fclean:
 	@echo -e "$(ANSI_GREEN)[make][$(PROJ_NAME)]:$(ANSI_RESET) cleaning $(ANSI_GREEN)build$(ANSI_RESET) files"
 	@rm -rf $(BUILD_DIR)
+
+test: re
+	@./build/bin/ircserv 6667 42
 
 re: fclean all
 

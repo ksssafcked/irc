@@ -1,2 +1,5 @@
+.cache/
 build/
 subject/
+
+compile_commands.json
