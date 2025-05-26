@@ -3,6 +3,7 @@
 #include <poll.h>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "Client.hpp"
 
@@ -27,9 +28,9 @@ private:
     int _socket;
 
     std::vector< struct pollfd > _fds;
-    std::vector< Client > _clients;
+    std::map< int, Client > _client_map;
 
-    typedef std::vector< Client >::iterator ClientIterator;
+    typedef std::map< int, Client >::iterator ClientIterator;
 
     bool setup_socket();
     bool setup_signal();
@@ -38,5 +39,5 @@ private:
     bool accept_client();
     void drop_client(ClientIterator& client);
 
-    void handle_client_input(ClientIterator& client);
+    bool handle_client_input(ClientIterator& client);
 };

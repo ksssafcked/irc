@@ -19,18 +19,17 @@ struct Token {
 };
 
 struct Client {
-    int fd;
-    size_t poll_index;
     bool registered; // if the client is fully connected or not
 
     std::string message;
     std::string response;
 
-    typedef std::vector< Token >::const_iterator TokenIterator;
+    Client() : registered(false) {}
 
     bool is_message_complete();
     void process_message();
 
 private:
+    typedef std::vector< Token >::const_iterator TokenIterator;
     bool tokenize_message(std::vector< Token >& tokens);
 };

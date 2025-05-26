@@ -1,25 +1,12 @@
 #include "Server.hpp"
 #include "Common.hpp"
 
-#include <algorithm>
 #include <unistd.h>
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <iostream>
 #include <csignal>
-
-namespace utils {
-
-struct FindClient {
-    int fd;
-
-    FindClient(int fd) : fd(fd) {}
-
-    bool operator()(const Client& client) const { return client.fd == fd; }
-};
-
-} // namespace utils
 
 bool Server::running = false;
 
@@ -69,8 +56,8 @@ void Server::run() {
 
         // handle any clients
         for (size_t i = 1; i < _fds.size(); i++) {
-            ClientIterator client = std::find_if(_clients.begin(), _clients.end(), utils::FindClient(_fds[i].fd));
-            if (client == _clients.end()) {
+            ClientIterator client = _client_map.find(_fds[i].fd);
+            if (client == _client_map.end()) {
                 // NOTE: should never happen
                 continue;
             }
@@ -156,40 +143,42 @@ bool Server::accept_client() {
 
     this->add_fd_to_poll(new_fd, POLLIN | POLLOUT);
 
-    Client client;
-    client.fd = new_fd;
-    client.poll_index = this->_fds.size() - 1;
-
-    this->_clients.push_back(client);
+    _client_map[new_fd] = Client();
 
     return true;
 }
 
 void Server::drop_client(ClientIterator& client) {
-    std::cout << "[info][server]: dropping client (" << client->fd << ")\n";
+    std::cout << "[info][server]: dropping client (" << client->first << ")\n";
 
-    close(client->fd);
+    for (size_t i = 1; i < _fds.size(); ++i) {
+        if (_fds[i].fd == client->first) {
+            _fds.erase(this->_fds.begin() + i);
+            break;
+        }
+    }
 
-    this->_fds.erase(this->_fds.begin() + client->poll_index);
-    this->_clients.erase(client);
+    close(client->first);
+    _client_map.erase(client);
 }
 
-void Server::handle_client_input(ClientIterator& client) {
-    std::cout << "[info][server]: handling input from client (" << client->fd << ")\n";
+bool Server::handle_client_input(ClientIterator& client) {
+    std::cout << "[info][server]: handling input from client (" << client->first << ")\n";
 
     char buffer[512];
-    ssize_t bytes_read = recv(client->fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+    ssize_t bytes_read = recv(client->first, buffer, sizeof(buffer), MSG_DONTWAIT);
 
     if (bytes_read <= 0) {
-        std::cout << "[error][server]: failed to read input from client (" << client->fd << ")\n";
         drop_client(client);
-        return;
+        return false;
     }
 
     // build up the current message (https://modern.ircdocs.horse/#message-format)
-    client->message += std::string(buffer, bytes_read);
+    client->second.message += std::string(buffer, bytes_read);
 
-    if (client->is_message_complete()) {
-        client->process_message();
+    if (client->second.is_message_complete()) {
+        client->second.process_message();
     }
+
+    return true;
 }
