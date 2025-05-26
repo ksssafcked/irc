@@ -9,6 +9,8 @@ enum CommandResultType {
     CMD_RESULT_NOT_FOUND,
     CMD_RESULT_FAILED,
 
+    CMD_CHECK_USER,                 // server needs to check password
+    CMD_NO_RESULT,                  // no reply needed
     CRD_RESULT_REPLY,               // reply only to client who the sent the command
     CRD_RESULT_REPLY_AND_BROADCAST, // reply to client who sent the command and broadcast message to other clients
     CRD_RESULT_BROADCAST,           // broadcast message to other clients
@@ -31,4 +33,7 @@ public:
 
 private:
     static CommandResult cap_command_handler(Client* client, std::vector< Token >& args);
+    static CommandResult nick_command_handler(Client* client, std::vector< Token >& args);
+    static CommandResult username_command_handler(Client* client, std::vector< Token >& args);
+    static CommandResult password_command_handler(Client* client, std::vector< Token >& args);
 };

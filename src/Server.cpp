@@ -165,6 +165,17 @@ void Server::drop_client(ClientIterator& client) {
     _client_map.erase(client);
 }
 
+void Server::send_content(int fd, std::string message){
+    send(fd, message.c_str(), message.length(), MSG_DONTWAIT);
+}
+
+void Server::send_to_all(ClientIterator& client, CommandResult result){
+    if (result.type == CRD_RESULT_REPLY)
+    {
+        send_content(client->first, result.reply);
+    }
+}
+
 bool Server::handle_client_input(ClientIterator& client) {
     // std::cout << "[info][server]: handling input from client (" << client->first << ")\n";
 
@@ -178,8 +189,27 @@ bool Server::handle_client_input(ClientIterator& client) {
 
     // build up the current message (https://modern.ircdocs.horse/#message-format)
     client->second.input += std::string(buffer, bytes_read);
+    // std::cout << ANSI_PINK << "[debug][server]: input from client (" << client->second.input << ")\n" << ANSI_RESET;
 
-    client->second.process_input();
+
+    CommandResult result;
+    while (!client->second.input.empty())
+    {
+        std::cout << ANSI_PINK << "[debug][server]: input from client (" << client->second.input << ")\n" << ANSI_RESET;
+        if (client->second.process_input(result))
+        {
+            if (result.type != CMD_CHECK_USER)
+                this->send_to_all(client, result);
+            else
+            {
+                if (client->second.password == this->_password)
+                {
+                    client->second.registered = true;
+                    std::cout << ANSI_RED << "BRAVO !\n" << ANSI_RESET;
+                }
+            }
+        }
+    }
 
     return true;
 }

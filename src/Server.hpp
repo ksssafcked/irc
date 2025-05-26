@@ -6,6 +6,7 @@
 #include <map>
 
 #include "Client.hpp"
+#include "Commands.hpp"
 
 class Server {
 private:
@@ -38,6 +39,9 @@ private:
 
     bool accept_client();
     void drop_client(ClientIterator& client);
+
+    void send_content(int fd, std::string message);
+    void send_to_all(ClientIterator& client, CommandResult result);
 
     bool handle_client_input(ClientIterator& client);
 };

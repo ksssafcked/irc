@@ -10,6 +10,8 @@ enum TokenKind {
     TK_NUMBER,
 };
 
+struct CommandResult;
+
 struct Token {
     int kind;
     std::string data;
@@ -21,15 +23,22 @@ struct Client {
     bool registered; // if the client is fully connected or not
 
     std::string input;
+    std::string nickname;
+    std::string username;
     std::string response;
+    std::string password;
+
 
     Client() : registered(false) {}
 
-    void process_input();
+    bool process_input(CommandResult& result);
 
 private:
     typedef std::vector< Token >::const_iterator TokenIterator;
 
-    bool split_input_buffer(std::vector< std::string >& messages);
+    bool is_sending(CommandResult result);
+
+    bool split_input_buffer(std::string& message);
+    void skip_delimiter(std::string message, size_t& i);
     bool tokenize_message(const std::string& message, std::vector< Token >& tokens);
 };

@@ -4,43 +4,72 @@
 
 #include <iostream>
 
-void Client::process_input() {
+bool Client::is_sending(CommandResult result){
+    if (result.type == CRD_RESULT_REPLY || result.type == CRD_RESULT_BROADCAST || result.type == CRD_RESULT_REPLY_AND_BROADCAST || result.type == CMD_CHECK_USER){
+        return true;
+    }
+    return false;
+}
+
+bool Client::process_input(CommandResult& result) {
     std::cout << ANSI_CYAN << "[debug][server]: parsing client input: [" << this->input << "]\n" << ANSI_RESET;
 
     // handle multi-line messages (IRC v3)
-    std::vector< std::string > messages;
-    if (!split_input_buffer(messages)) {
-        return;
+    std::string message;
+    if (!split_input_buffer(message)) {
+        return false;
     }
 
-    input.clear();
+    // input.clear();
 
-    for (size_t i = 0; i < messages.size(); i++) {
-        const std::string& message = messages[i];
         std::cout << ANSI_CYAN << "[debug][server]: processing message: [" << message << "]\n" << ANSI_RESET;
 
         std::vector< Token > tokens;
         if (!tokenize_message(message, tokens)) {
             std::cout << ANSI_RED << "[error][server]: failed to tokenize client message!\n" << ANSI_RESET;
-            return;
+            return false;
         }
 
         for (TokenIterator itr = tokens.begin(); itr != tokens.end(); itr++) {
             std::cout << "token(" << itr->kind << ", [" << itr->data << "]\n";
         }
 
-        CommandResult result = Commands::execute(tokens.begin()->data, this, tokens);
-        if (result.type == CMD_RESULT_NOT_FOUND) {
-            std::cout << "[debug][client]: command '" << tokens.begin()->data << "' not found\n";
-        } else if (result.type == CMD_RESULT_FAILED) {
-            std::cout << "[debug][client]: command '" << tokens.begin()->data << "' failed\n";
+        result = Commands::execute(tokens.begin()->data, this, tokens);
+        if (is_sending(result))
+            return true;
+        else
+        {
+             if (result.type == CMD_RESULT_NOT_FOUND) {
+                std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' not found\n" << ANSI_RESET;
+            } else if (result.type == CMD_RESULT_FAILED) {
+                std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' failed\n" << ANSI_RESET;
+            } else if (result.type == CMD_NO_RESULT){
+                std::cout << ANSI_CYAN << result.reply << ANSI_RESET;
+            }
+            return false;
         }
+        // if (result.type == CMD_RESULT_NOT_FOUND) {
+        //     std::cout << "[debug][client]: command '" << tokens.begin()->data << "' not found\n";
+        // } else if (result.type == CMD_RESULT_FAILED) {
+        //     std::cout << "[debug][client]: command '" << tokens.begin()->data << "' failed\n";
+        // }
 
         // TODO: think of way to use result
+}
+
+void Client::skip_delimiter(std::string message, size_t& i) {
+    while (i < message.size())
+    {
+        if (message[i] == '\r')
+            i++;
+        else if (message[i] == '\n')
+            i++;
+        else
+            return;
     }
 }
 
-bool Client::split_input_buffer(std::vector< std::string >& messages) {
+bool Client::split_input_buffer(std::string& message) {
     // we should not try processing commands if they contain a delimiter
     if (input.find('\r') == std::string::npos && input.find('\n') == std::string::npos) {
         return false;
@@ -59,11 +88,13 @@ bool Client::split_input_buffer(std::vector< std::string >& messages) {
                 }
                 j++;
             }
-
             if (j > i && had_printable_chars) {
-                std::string message = input.substr(i, j - i);
-                // std::cout << ANSI_PINK << "split [" << message << "]\n" << ANSI_RESET;
-                messages.push_back(message);
+                message = input.substr(i, j - i);
+                skip_delimiter(input, j);
+                input = input.substr(j, input.size() - j);
+                // std::cout << ANSI_PINK << "input [" << input << "]\n" << ANSI_RESET;
+                std::cout << ANSI_PINK << "split [" << message << "]\n" << ANSI_RESET;
+                return true;
             }
 
             i = j;
