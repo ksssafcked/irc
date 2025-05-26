@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include "Common.hpp"
+#include "Commands.hpp"
 
 #include <unistd.h>
 #include <netdb.h>
@@ -19,6 +20,8 @@ Server::Server(unsigned short port, const std::string& password)
     if (!this->setup_signal()) {
         return;
     }
+
+    Commands::register_commands();
 
     std::cout << "[info][server]: listening on port " << port << "\n" << ANSI_RESET;
 

@@ -20,7 +20,7 @@ OBJ_DIR := $(BUILD_DIR)/obj
 
 NAME := $(BIN_DIR)/$(PROJ_NAME)
 
-SRCS := src/main.cpp src/Server.cpp src/Client.cpp src/Common.cpp
+SRCS := src/main.cpp src/Server.cpp src/Client.cpp src/Common.cpp src/Commands.cpp
 
 OBJS := $(SRCS:src/%.cpp=$(OBJ_DIR)/%.o)
 
@@ -49,6 +49,9 @@ fclean:
 
 test: re
 	@./build/bin/ircserv 6667 42
+
+tests: re
+	@python ./test/test.py
 
 re: fclean all
 

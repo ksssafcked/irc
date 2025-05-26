@@ -1,5 +1,6 @@
 #include "Client.hpp"
 #include "Common.hpp"
+#include "Commands.hpp"
 
 #include <iostream>
 
@@ -30,6 +31,10 @@ void Client::process_message() {
 
         for (TokenIterator itr = tokens.begin(); itr != tokens.end(); itr++) {
             std::cout << "token(" << itr->kind << ", [" << itr->data << "]\n";
+        }
+
+        if (!Commands::execute(tokens.begin()->data, this, tokens)) {
+            std::cout << "[debug][client]: command '" << tokens.begin()->data << "' failed\n";
         }
     }
 
