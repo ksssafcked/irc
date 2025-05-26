@@ -53,6 +53,10 @@ test: re
 tests: re
 	@python ./test/test.py
 
+irssi:
+	@docker build . -t irssi
+	@docker run -it --rm --network host irssi bash
+
 re: fclean all
 
 .PHONY: all clean fclean re
