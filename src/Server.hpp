@@ -38,5 +38,7 @@ private:
     bool accept_client();
     void drop_client(ClientIterator& client);
 
+    void send_message(ClientIterator& client);
+
     void handle_client_input(ClientIterator& client);
 };

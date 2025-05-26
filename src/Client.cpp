@@ -31,7 +31,26 @@ void Client::process_message() {
         for (TokenIterator itr = tokens.begin(); itr != tokens.end(); itr++) {
             std::cout << "token(" << itr->kind << ", [" << itr->data << "]\n";
         }
+
+        if(!tokens.empty() && tokens[0].kind == TK_WORD)
+        {
+            std::string cmd = tokens[0].data;
+
+            if (cmd == "CAP")
+            {
+                if (tokens[2].data == "LS")
+                    response =  "CAP * LS :\r\n";
+            }
+            if (cmd == "USER")
+            {
+                response = ":server 001 testuser :Welcome to the IRC Network testuser!ksssafcked@ksssafcked\r\n";
+                // response = ":ksssafcked!ksssafcked@irc.example.com JOIN #ledion\r\n";
+                // response = "JOIN #";
+                // response += tokens[2].data;
+            }
+        }
     }
+    // std::cout << ANSI_CYAN << "[debug][server]: senddd client message: [" << msg << "]\n" << ANSI_RESET;
 
     this->message.clear();
 }

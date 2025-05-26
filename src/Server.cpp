@@ -174,6 +174,12 @@ void Server::drop_client(ClientIterator& client) {
     this->_clients.erase(client);
 }
 
+void Server::send_message(ClientIterator& client){
+    // std::cout << ANSI_CYAN << "[debug][server]: sending message to client: [" << client->response << "]\n" << ANSI_RESET;
+
+    send(client->fd, client->response.c_str(), client->response.length(), MSG_DONTWAIT);
+}
+
 void Server::handle_client_input(ClientIterator& client) {
     std::cout << "[info][server]: handling input from client (" << client->fd << ")\n";
 
@@ -191,5 +197,7 @@ void Server::handle_client_input(ClientIterator& client) {
 
     if (client->is_message_complete()) {
         client->process_message();
+        if (client->response.length())
+            send_message(client);
     }
 }
