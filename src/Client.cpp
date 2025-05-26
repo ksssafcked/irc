@@ -2,6 +2,10 @@
 #include "Common.hpp"
 
 #include <iostream>
+#include <unistd.h>
+
+Client::~Client() {
+}
 
 bool Client::is_message_complete() {
     if (this->message.find("\r\n") != std::string::npos) {
@@ -40,14 +44,29 @@ void Client::process_message() {
             {
                 if (tokens[2].data == "LS")
                     response =  "CAP * LS :\r\n";
+                if (tokens[2].data == "END")
+                {
+                    // response = ":lsaiti JOIN #ledion\r\n";
+                    response = ":ircserver 001 lsaiti :Welcome to the IRC Network lsaiti!lsaiti@lsaiti\r\n";
+                }
             }
-            if (cmd == "USER")
+            else if (cmd == "MODE")
             {
-                response = ":server 001 testuser :Welcome to the IRC Network testuser!ksssafcked@ksssafcked\r\n";
-                // response = ":ksssafcked!ksssafcked@irc.example.com JOIN #ledion\r\n";
-                // response = "JOIN #";
-                // response += tokens[2].data;
+                if (tokens[4].data == "+")
+                    response = ":ircserver 221 lsaiti +i\r\n";
             }
+            else if (cmd == "PING")
+            {
+                response = "PONG ircserver\r\n";
+            }
+            else if (cmd == "JOIN")
+            {
+                response = ":lsaiti!lsaiti@lsaiti JOIN :#";
+                response += tokens[3].data;
+                response += "\r\n";
+            }
+            else
+                response.clear();
         }
     }
     // std::cout << ANSI_CYAN << "[debug][server]: senddd client message: [" << msg << "]\n" << ANSI_RESET;

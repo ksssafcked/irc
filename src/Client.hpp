@@ -31,6 +31,8 @@ struct Client {
     bool is_message_complete();
     void process_message();
 
+    ~Client();
+
 private:
     bool tokenize_message(std::vector< Token >& tokens);
 };

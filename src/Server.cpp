@@ -44,6 +44,9 @@ Server::~Server() {
     if (this->_socket) {
         close(this->_socket);
     }
+    _clients.clear();
+    // _fds.clear();
+    std::cout << "HELLOOOO\n";
 }
 
 void Server::run() {
@@ -74,6 +77,8 @@ void Server::run() {
                 // NOTE: should never happen
                 continue;
             }
+
+            client->poll_index = i;
 
             if (_fds[i].revents & POLLIN) {
                 handle_client_input(client);
@@ -158,7 +163,6 @@ bool Server::accept_client() {
 
     Client client;
     client.fd = new_fd;
-    client.poll_index = this->_fds.size() - 1;
 
     this->_clients.push_back(client);
 
@@ -175,7 +179,7 @@ void Server::drop_client(ClientIterator& client) {
 }
 
 void Server::send_message(ClientIterator& client){
-    // std::cout << ANSI_CYAN << "[debug][server]: sending message to client: [" << client->response << "]\n" << ANSI_RESET;
+    std::cout << ANSI_CYAN << "[debug][server]: sending message to client: [" << client->response << "]\n" << ANSI_RESET;
 
     send(client->fd, client->response.c_str(), client->response.length(), MSG_DONTWAIT);
 }

@@ -1,5 +1,5 @@
 #include "Server.hpp"
-
+#include <iostream>
 #include "Common.hpp"
 
 int main(int argc, char** argv) {
@@ -11,7 +11,10 @@ int main(int argc, char** argv) {
     unsigned short port = utils::str_to_value< unsigned short >(argv[1]);
     std::string password = argv[2];
 
-    Server server(port, password);
+    {
+        Server server(port, password);
 
-    server.run();
+        server.run();
+    }
+    std::cout << "HELOOOO2222\n";
 }
