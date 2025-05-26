@@ -4,11 +4,10 @@
 #include <vector>
 
 enum TokenKind {
-    TK_WORD,
+    // 0..255 is kept for ascii characters
+    TK_WORD = 256,
     TK_STRING,
     TK_NUMBER,
-    TK_SPACE,
-    TK_CHAR, // anything that is not one of the above
 };
 
 struct Token {
@@ -21,15 +20,16 @@ struct Token {
 struct Client {
     bool registered; // if the client is fully connected or not
 
-    std::string message;
+    std::string input;
     std::string response;
 
     Client() : registered(false) {}
 
-    bool is_message_complete();
-    void process_message();
+    void process_input();
 
 private:
     typedef std::vector< Token >::const_iterator TokenIterator;
-    bool tokenize_message(std::vector< Token >& tokens);
+
+    bool split_input_buffer(std::vector< std::string >& messages);
+    bool tokenize_message(const std::string& message, std::vector< Token >& tokens);
 };

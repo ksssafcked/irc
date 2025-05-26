@@ -166,7 +166,7 @@ void Server::drop_client(ClientIterator& client) {
 }
 
 bool Server::handle_client_input(ClientIterator& client) {
-    std::cout << "[info][server]: handling input from client (" << client->first << ")\n";
+    // std::cout << "[info][server]: handling input from client (" << client->first << ")\n";
 
     char buffer[512];
     ssize_t bytes_read = recv(client->first, buffer, sizeof(buffer), MSG_DONTWAIT);
@@ -177,11 +177,9 @@ bool Server::handle_client_input(ClientIterator& client) {
     }
 
     // build up the current message (https://modern.ircdocs.horse/#message-format)
-    client->second.message += std::string(buffer, bytes_read);
+    client->second.input += std::string(buffer, bytes_read);
 
-    if (client->second.is_message_complete()) {
-        client->second.process_message();
-    }
+    client->second.process_input();
 
     return true;
 }

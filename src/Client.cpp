@@ -4,27 +4,23 @@
 
 #include <iostream>
 
-bool Client::is_message_complete() {
-    if (this->message.find("\r\n") != std::string::npos) {
-        this->message = this->message.substr(0, this->message.size() - 2);
-        return true;
+void Client::process_input() {
+    std::cout << ANSI_CYAN << "[debug][server]: parsing client input: [" << this->input << "]\n" << ANSI_RESET;
+
+    // handle multi-line messages (IRC v3)
+    std::vector< std::string > messages;
+    if (!split_input_buffer(messages)) {
+        return;
     }
 
-    if (this->message.find("\r") != std::string::npos || this->message.find("\n") != std::string::npos) {
-        this->message = this->message.substr(0, this->message.size() - 1);
-        return true;
-    }
+    input.clear();
 
-    return false;
-}
+    for (size_t i = 0; i < messages.size(); i++) {
+        const std::string& message = messages[i];
+        std::cout << ANSI_CYAN << "[debug][server]: processing message: [" << message << "]\n" << ANSI_RESET;
 
-void Client::process_message() {
-    std::cout << ANSI_CYAN << "[debug][server]: parsing client message: [" << this->message << "]\n" << ANSI_RESET;
-
-    //
-    {
         std::vector< Token > tokens;
-        if (!tokenize_message(tokens)) {
+        if (!tokenize_message(message, tokens)) {
             std::cout << ANSI_RED << "[error][server]: failed to tokenize client message!\n" << ANSI_RESET;
             return;
         }
@@ -33,59 +29,94 @@ void Client::process_message() {
             std::cout << "token(" << itr->kind << ", [" << itr->data << "]\n";
         }
 
-        if (!Commands::execute(tokens.begin()->data, this, tokens)) {
+        CommandResult result = Commands::execute(tokens.begin()->data, this, tokens);
+        if (result.type == CMD_RESULT_NOT_FOUND) {
+            std::cout << "[debug][client]: command '" << tokens.begin()->data << "' not found\n";
+        } else if (result.type == CMD_RESULT_FAILED) {
             std::cout << "[debug][client]: command '" << tokens.begin()->data << "' failed\n";
         }
-    }
 
-    this->message.clear();
+        // TODO: think of way to use result
+    }
 }
 
-bool Client::tokenize_message(std::vector< Token >& tokens) {
-    const std::string& str = this->message;
+bool Client::split_input_buffer(std::vector< std::string >& messages) {
+    // we should not try processing commands if they contain a delimiter
+    if (input.find('\r') == std::string::npos && input.find('\n') == std::string::npos) {
+        return false;
+    }
 
     size_t i = 0;
-    while (i < str.size()) {
-        char curr = str[i];
-        if (curr == ' ') {
-            tokens.push_back(Token(TK_SPACE, " "));
+    while (i < input.size()) {
+        if (input[i] != '\r' && input[i] != '\n') {
+
+            size_t j = i;
+            bool had_printable_chars = false;
+
+            while (j < input.size() && (input[j] != '\r' && input[j] != '\n')) {
+                if (input[j] > 32 && input[j] < 127) {
+                    had_printable_chars = true;
+                }
+                j++;
+            }
+
+            if (j > i && had_printable_chars) {
+                std::string message = input.substr(i, j - i);
+                // std::cout << ANSI_PINK << "split [" << message << "]\n" << ANSI_RESET;
+                messages.push_back(message);
+            }
+
+            i = j;
+            continue;
+        }
+        i++;
+    }
+
+    return true;
+}
+
+bool Client::tokenize_message(const std::string& message, std::vector< Token >& tokens) {
+    size_t i = 0;
+    while (i < message.size()) {
+        char curr = message[i];
+        if (utils::is_space(curr)) {
             i++;
             continue;
         } else if (utils::is_alpha(curr)) {
             size_t start = i;
 
             // keep going until we don't find a letter
-            while (i < str.size() && utils::is_alpha(str[i])) {
+            while (i < message.size() && utils::is_alpha(message[i])) {
                 i++;
             }
 
-            tokens.push_back(Token(TK_WORD, str.substr(start, i - start)));
+            tokens.push_back(Token(TK_WORD, message.substr(start, i - start)));
             continue;
         } else if (curr == '\'' || curr == '"') {
             // skip the first quote
             size_t start = ++i;
 
             // keep going until we find a matching quote
-            while (i < str.size() && str[i] != curr) {
+            while (i < message.size() && message[i] != curr) {
                 i++;
             }
 
             // don't capture the quotes in the token data
-            tokens.push_back(Token(TK_STRING, str.substr(start, i - start)));
+            tokens.push_back(Token(TK_STRING, message.substr(start, i - start)));
             i++;
             continue;
         } else if (utils::is_digit(curr)) {
             size_t start = i;
 
             // keep going until we don't find a number
-            while (i < str.size() && utils::is_digit(str[i])) {
+            while (i < message.size() && utils::is_digit(message[i])) {
                 i++;
             }
 
-            tokens.push_back(Token(TK_NUMBER, str.substr(start, i - start)));
+            tokens.push_back(Token(TK_NUMBER, message.substr(start, i - start)));
             continue;
         } else {
-            tokens.push_back(Token(TK_CHAR, str.substr(i, 1)));
+            tokens.push_back(Token(curr, message.substr(i, 1)));
             i++;
             continue;
         }

@@ -9,18 +9,25 @@ void Commands::register_commands() {
     // _commands["PASS"] = Commands::cap_command_handler;
 }
 
-bool Commands::execute(const std::string& name, Client* client, std::vector< Token >& args) {
-    Iterator itr = _commands.find(name);
+CommandResult Commands::execute(const std::string& name, Client* client, std::vector< Token >& args) {
+    std::map< std::string, CommandHandler >::iterator itr = _commands.find(name);
     if (itr != _commands.end()) {
+        std::cout << "executing " << name << "!\n";
         return itr->second(client, args);
     }
 
-    return false;
+    CommandResult result;
+    result.type = CMD_RESULT_NOT_FOUND;
+
+    return result;
 }
 
-bool Commands::cap_command_handler(Client* client, std::vector< Token >& args) {
+CommandResult Commands::cap_command_handler(Client* client, std::vector< Token >& args) {
     (void)client;
     (void)args;
-    std::cout << "executing " << args[0].data << "!\n";
-    return true;
+
+    CommandResult result;
+    result.type = CMD_RESULT_FAILED; // TODO: change this
+
+    return result;
 }
