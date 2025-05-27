@@ -182,7 +182,7 @@ void Server::send_to_all(ClientIterator& client, CommandResult result){
     if (result.type == CRD_RESULT_BROADCAST)
     {
         std::string mess;
-        mess = ":" + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + " PRIVMSG #ledion :" + result.message + "\r\n";
+        mess = ":" + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + " PRIVMSG #" + result.reply + " :" + result.message + "\r\n";
         for (std::vector< Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
         {
             for (std::vector< int>::iterator fds = (*it)._users.begin(); fds != (*it)._users.end(); fds++)
