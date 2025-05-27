@@ -44,14 +44,17 @@ void Server::run() {
 
     Server::running = true;
 
+    int activity = 0;
     // TODO: signal to interrupt this
     while (Server::running) {
         // check if anything happened
-        if (poll(_fds.data(), _fds.size(), 0) < 0) {
+        activity = poll(_fds.data(), _fds.size(), 0);
+        if (activity < 0) {
             std::cerr << ANSI_RED << "[error][server]: failed to poll!\n" << ANSI_RESET;
             return;
         }
-
+        else if (activity == 0)
+            continue;
         // accept any incoming connections
         if (_fds[0].revents & POLLIN) {
             this->accept_client();
@@ -243,9 +246,6 @@ bool Server::handle_client_input(ClientIterator& client) {
                     std::cout << ANSI_RED << "BRAVO !\n" << ANSI_RESET;
                 }
             }
-            if (all_info(client->second))
-                send_content(client->first, \
-                ":ircserver 001 " + client->second.nickname + " :Welcome to the IRC network, " + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + "\r\n");
         }
     }
 

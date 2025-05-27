@@ -40,6 +40,9 @@ private:
 
     bool is_sending(CommandResult result);
 
+    Token add_full_message(const std::string& message, size_t& i);
+
+
     bool split_input_buffer(std::string& message);
     void skip_delimiter(std::string message, size_t& i);
     bool tokenize_message(const std::string& message, std::vector< Token >& tokens);

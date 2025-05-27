@@ -106,6 +106,17 @@ bool Client::split_input_buffer(std::string& message) {
     return true;
 }
 
+Token Client::add_full_message(const std::string& message, size_t& i) {
+    if (utils::is_space(message[i]))
+        i++;
+    size_t j = i;
+    while (j < message.size() && message[j] != '\r' && message[j] != '\n' && message[j] != ':' )
+        j++;
+    Token t(TK_STRING, message.substr(i, j-i));
+    i = j;
+    return t;
+}
+
 bool Client::tokenize_message(const std::string& message, std::vector< Token >& tokens) {
     size_t i = 0;
     while (i < message.size()) {
@@ -146,7 +157,14 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
 
             tokens.push_back(Token(TK_NUMBER, message.substr(start, i - start)));
             continue;
-        } else {
+        } 
+        else if (curr == ':' && i + 1 < message.size()) {
+            tokens.push_back(Token(curr, message.substr(i,1)));
+            i++;
+            tokens.push_back(add_full_message(message, i));
+            continue;
+        }
+        else {
             tokens.push_back(Token(curr, message.substr(i, 1)));
             i++;
             continue;
