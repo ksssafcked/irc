@@ -68,7 +68,12 @@ void Server::run() {
             if (_fds[i].revents & POLLIN) {
                 handle_client_input(client);
             }
-
+            if (all_info(client->second) && !client->second.connected) {
+                std::cout << ANSI_RED << "All info !\n" << ANSI_RESET;
+                send_content(client->first, \
+                    ":ircserver 001 " + client->second.nickname + " :Welcome to the IRC network, " + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + "\r\n");
+                client->second.connected = true;
+            }
             // TODO: POLLOUT
         }
     }
@@ -174,7 +179,26 @@ void Server::send_to_all(ClientIterator& client, CommandResult result){
     {
         send_content(client->first, result.reply);
     }
+    if (result.type == CRD_RESULT_BROADCAST)
+    {
+        std::string mess;
+        mess = ":" + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + " PRIVMSG #ledion :" + result.message + "\r\n";
+        for (std::vector< Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+        {
+            for (std::vector< int>::iterator fds = (*it)._users.begin(); fds != (*it)._users.end(); fds++)
+            {
+                ClientIterator newclient = _client_map.find((*fds));
+                if (client->first != newclient->first)
+                {
+                    std::cout << ANSI_RED << mess << ANSI_RESET;
+                    send_content(newclient->first, mess);
+                }
+            }
+        }
+    }
 }
+
+bool Server::all_info(Client& client){ return (client.registered && !client.username.empty() && !client.nickname.empty()); }
 
 bool Server::handle_client_input(ClientIterator& client) {
     // std::cout << "[info][server]: handling input from client (" << client->first << ")\n";
@@ -198,7 +222,18 @@ bool Server::handle_client_input(ClientIterator& client) {
         std::cout << ANSI_PINK << "[debug][server]: input from client (" << client->second.input << ")\n" << ANSI_RESET;
         if (client->second.process_input(result))
         {
-            if (result.type != CMD_CHECK_USER)
+            if (result.type == CMD_CHANNEL)
+            {
+                if (_channels.empty())
+                {
+                    Channel c(result.reply);
+                    c.add_user(client->first);
+                    _channels.push_back(c);
+                }
+                else
+                    _channels[0].add_user(client->first);
+            }
+            else if (result.type != CMD_CHECK_USER)
                 this->send_to_all(client, result);
             else
             {
@@ -208,6 +243,9 @@ bool Server::handle_client_input(ClientIterator& client) {
                     std::cout << ANSI_RED << "BRAVO !\n" << ANSI_RESET;
                 }
             }
+            if (all_info(client->second))
+                send_content(client->first, \
+                ":ircserver 001 " + client->second.nickname + " :Welcome to the IRC network, " + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + "\r\n");
         }
     }
 

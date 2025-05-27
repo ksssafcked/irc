@@ -9,6 +9,8 @@ void Commands::register_commands() {
     _commands["NICK"] = Commands::nick_command_handler;
     _commands["USER"] = Commands::username_command_handler;
     _commands["PASS"] = Commands::password_command_handler;
+    _commands["JOIN"] = Commands::join_command_handler;
+    _commands["PRIVMSG"] = Commands::message_command_handler;
 }
 
 CommandResult Commands::execute(const std::string& name, Client* client, std::vector< Token >& args) {
@@ -52,21 +54,49 @@ CommandResult Commands::nick_command_handler(Client* client, std::vector< Token 
 
 
 CommandResult Commands::username_command_handler(Client* client, std::vector< Token >& args) {
-    (void)args;
-
     CommandResult result;
     client->username = args[1].data;
+    client->hostname = args[2].data;
     result.type = CMD_NO_RESULT;
     result.reply = "[debug][client]: client connected with username: [" + client->username + "]\n";
-                
+
     return result;
 }
 
 CommandResult Commands::password_command_handler(Client* client, std::vector< Token >& args) {
-    (void)args;
-
     CommandResult result;
     client->password = args[1].data;
     result.type = CMD_CHECK_USER;                
+    return result;
+}
+
+CommandResult Commands::message_command_handler(Client* client, std::vector< Token >& args) {
+    CommandResult result;
+    if (args.size() < 5 || !client->registered) {
+        result.type = CMD_NO_RESULT;
+        return result;
+    }
+    result.type = CRD_RESULT_BROADCAST;
+    result.reply = args[2].data;
+    result.message.clear();
+    for (size_t i = 4; i < args.size(); i++)
+    {
+        result.message += args[i].data;
+    }
+    return result;
+}
+
+CommandResult Commands::join_command_handler(Client* client, std::vector< Token >& args) {
+    CommandResult result;
+
+    if (args.size() != 3) {
+        result.type = CMD_NO_RESULT;
+        return result;
+    }
+    result.type = CMD_CHANNEL;
+    result.reply = args[2].data;
+    result.message = client->username;
+    std::cout << "[debug][client]: creating channel : [" << args[2].data << "]\n";
+
     return result;
 }

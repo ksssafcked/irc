@@ -5,7 +5,7 @@
 #include <iostream>
 
 bool Client::is_sending(CommandResult result){
-    if (result.type == CRD_RESULT_REPLY || result.type == CRD_RESULT_BROADCAST || result.type == CRD_RESULT_REPLY_AND_BROADCAST || result.type == CMD_CHECK_USER){
+    if (result.type == CRD_RESULT_REPLY || result.type == CRD_RESULT_BROADCAST || result.type == CRD_RESULT_REPLY_AND_BROADCAST || result.type == CMD_CHECK_USER || result.type == CMD_CHANNEL){
         return true;
     }
     return false;

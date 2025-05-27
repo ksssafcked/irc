@@ -7,6 +7,7 @@
 
 #include "Client.hpp"
 #include "Commands.hpp"
+#include "Channel.hpp"
 
 class Server {
 private:
@@ -30,6 +31,7 @@ private:
 
     std::vector< struct pollfd > _fds;
     std::map< int, Client > _client_map;
+    std::vector< Channel > _channels;
 
     typedef std::map< int, Client >::iterator ClientIterator;
 
@@ -42,6 +44,8 @@ private:
 
     void send_content(int fd, std::string message);
     void send_to_all(ClientIterator& client, CommandResult result);
+
+    bool all_info(Client& client);
 
     bool handle_client_input(ClientIterator& client);
 };

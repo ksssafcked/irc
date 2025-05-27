@@ -21,15 +21,17 @@ struct Token {
 
 struct Client {
     bool registered; // if the client is fully connected or not
+    bool connected;
 
     std::string input;
     std::string nickname;
     std::string username;
     std::string response;
     std::string password;
+    std::string hostname;
 
 
-    Client() : registered(false) {}
+    Client() : registered(false), connected(false) {}
 
     bool process_input(CommandResult& result);
 
