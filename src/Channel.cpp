@@ -1,9 +1,19 @@
 #include "Channel.hpp"
 
-Channel::Channel(std::string channel_name): _channel_name(channel_name) {}
-
-void Channel::add_user(int fd) {
-    _users.push_back(fd);
+Channel::Channel(std::string name, int fd): channel_name(name) {
+    users.push_back(fd);
 }
 
-std::string Channel::getName() { return _channel_name;}
+void Channel::add_user(int fd) {
+    users.push_back(fd);
+}
+
+void Channel::delete_user(int fd)
+{
+    for (size_t i = 0; i < users.size(); i++) {
+        if (users[i] == fd)
+            users.erase(users.begin() + i);
+    }
+}
+
+std::string Channel::getName() { return channel_name;}

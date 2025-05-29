@@ -5,7 +5,7 @@
 #include <iostream>
 
 bool Client::is_sending(CommandResult result){
-    if (result.type == CRD_RESULT_REPLY || result.type == CRD_RESULT_BROADCAST || result.type == CRD_RESULT_REPLY_AND_BROADCAST || result.type == CMD_CHECK_USER || result.type == CMD_CHANNEL){
+    if (result.type == CMD_RESULT_REPLY || result.type == CMD_RESULT_BROADCAST || result.type == CMD_RESULT_REPLY_AND_BROADCAST || result.type == CMD_CHECK_USER || result.type == CMD_CHANNEL){
         return true;
     }
     return false;
@@ -36,11 +36,14 @@ bool Client::process_input(CommandResult& result) {
 
         result = Commands::execute(tokens.begin()->data, this, tokens);
         if (is_sending(result))
+        {
+            std::cout << ANSI_CYAN << "[debug][client]: HAHAH '" << tokens.begin()->data << "' not found\n" << ANSI_RESET;
             return true;
+        }
         else
         {
              if (result.type == CMD_RESULT_NOT_FOUND) {
-                std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' not found\n" << ANSI_RESET;
+                std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "\n" << ANSI_RESET;
             } else if (result.type == CMD_RESULT_FAILED) {
                 std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' failed\n" << ANSI_RESET;
             } else if (result.type == CMD_NO_RESULT){
@@ -127,6 +130,17 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
         } else if (utils::is_alpha(curr)) {
             size_t start = i;
 
+            // keep going until we don't find a letter
+            while (i < message.size() && utils::is_alpha(message[i])) {
+                i++;
+            }
+
+            tokens.push_back(Token(TK_WORD, message.substr(start, i - start)));
+            continue;
+        } else if (curr == '#') {
+           size_t start = i;
+
+            i++; // skip the #
             // keep going until we don't find a letter
             while (i < message.size() && utils::is_alpha(message[i])) {
                 i++;

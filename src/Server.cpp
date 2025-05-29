@@ -48,7 +48,7 @@ void Server::run() {
     // TODO: signal to interrupt this
     while (Server::running) {
         // check if anything happened
-        activity = poll(_fds.data(), _fds.size(), 0);
+        activity = poll(_fds.data(), _fds.size(), -1);
         if (activity < 0) {
             std::cerr << ANSI_RED << "[error][server]: failed to poll!\n" << ANSI_RESET;
             return;
@@ -69,11 +69,12 @@ void Server::run() {
             }
 
             if (_fds[i].revents & POLLIN) {
-                handle_client_input(client);
+                if (!handle_client_input(client))
+                    break;
             }
             if (all_info(client->second) && !client->second.connected) {
                 std::cout << ANSI_RED << "All info !\n" << ANSI_RESET;
-                send_content(client->first, \
+                send_message(client->first, \
                     ":ircserver 001 " + client->second.nickname + " :Welcome to the IRC network, " + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + "\r\n");
                 client->second.connected = true;
             }
@@ -125,6 +126,7 @@ static void sigint_handler(int signum) {
 bool Server::setup_signal() {
     struct sigaction sa;
     sa.sa_handler = sigint_handler;
+    sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
 
     if (sigaction(SIGINT, &sa, NULL) == -1) {
@@ -170,38 +172,91 @@ void Server::drop_client(ClientIterator& client) {
     }
 
     close(client->first);
+    delete_user_from_channels(client->first);
     _client_map.erase(client);
 }
 
-void Server::send_content(int fd, std::string message){
+void Server::send_message(int fd, std::string message){
     send(fd, message.c_str(), message.length(), MSG_DONTWAIT);
 }
 
-void Server::send_to_all(ClientIterator& client, CommandResult result){
-    if (result.type == CRD_RESULT_REPLY)
+void Server::send_to_all(ClientIterator& client, CommandResult result) {
+    if (result.type == CMD_RESULT_REPLY)
     {
-        send_content(client->first, result.reply);
+        send_message(client->first, result.reply);
     }
-    if (result.type == CRD_RESULT_BROADCAST)
-    {
+    if (result.type == CMD_RESULT_BROADCAST) {
         std::string mess;
-        mess = ":" + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + " PRIVMSG #" + result.reply + " :" + result.message + "\r\n";
-        for (std::vector< Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+        mess = ":" + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + " PRIVMSG " + result.reply + " :" + result.message + "\r\n";
+        for (size_t i = 0; i < _channels.size();i++)
         {
-            for (std::vector< int>::iterator fds = (*it)._users.begin(); fds != (*it)._users.end(); fds++)
+            if (_channels[i].channel_name != result.reply)
+                continue;
+            std::vector < int > user_list = _channels[i].users;
+            for (size_t j = 0; j < user_list.size(); j++)
             {
-                ClientIterator newclient = _client_map.find((*fds));
-                if (client->first != newclient->first)
+                if (client->first != user_list[j])
                 {
                     std::cout << ANSI_RED << mess << ANSI_RESET;
-                    send_content(newclient->first, mess);
+                    send_message(user_list[j], mess);
                 }
             }
         }
     }
 }
 
+// void Server::send_to_all(ClientIterator& client, CommandResult result){
+//     if (result.type == CMD_RESULT_REPLY)
+//     {
+//         send_message(client->first, result.reply);
+//     }
+//     if (result.type == CMD_RESULT_BROADCAST)
+//     {
+//         std::string mess;
+//         mess = ":" + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + " PRIVMSG #" + result.reply + " :" + result.message + "\r\n";
+//         for (std::vector< Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+//         {
+//             for (std::vector< int>::iterator fds = (*it).users.begin(); fds != (*it).users.end(); fds++)
+//             {
+//                 ClientIterator newclient = _client_map.find((*fds));
+//                 if (client->first != newclient->first)
+//                 {
+//                     std::cout << ANSI_RED << mess << ANSI_RESET;
+//                     send_message(newclient->first, mess);
+//                 }
+//             }
+//         }
+//     }
+// }
+
 bool Server::all_info(Client& client){ return (client.registered && !client.username.empty() && !client.nickname.empty()); }
+
+bool Server::does_channel_exist(std::string name) {
+    for (size_t i = 0; i < _channels.size(); i++) {
+        if (_channels[i].channel_name == name)
+            return true;
+    }
+    return false;
+}
+
+void Server::add_user_to_channel(std::string name, int fd) {
+    for (size_t i = 0; i < _channels.size(); i++) {
+        if (_channels[i].channel_name == name) {
+            _channels[i].add_user(fd);
+        }
+    }
+}
+
+void Server::delete_user_from_channels(int fd) {
+    for (size_t i = 0; i < _channels.size(); i++) {
+        std::vector <int> users = _channels[i].users;
+        for (size_t j = 0; j < users.size(); j++) {
+            if (users[j] == fd) {
+                _channels[i].users.erase(users.begin() + j);
+            }
+        }
+    }
+}
 
 bool Server::handle_client_input(ClientIterator& client) {
     // std::cout << "[info][server]: handling input from client (" << client->first << ")\n";
@@ -215,8 +270,12 @@ bool Server::handle_client_input(ClientIterator& client) {
     }
 
     // build up the current message (https://modern.ircdocs.horse/#message-format)
-    client->second.input += std::string(buffer, bytes_read);
+    client->second.input = std::string(buffer, bytes_read);
     // std::cout << ANSI_PINK << "[debug][server]: input from client (" << client->second.input << ")\n" << ANSI_RESET;
+
+    std::cout << ANSI_RED << "channels :" << _channels.size() << std::endl;
+    if (_channels.size() > 0)
+        std::cout << ANSI_RED << "users :" << _channels[0].users.size() << std::endl << ANSI_RESET;
 
 
     CommandResult result;
@@ -227,17 +286,15 @@ bool Server::handle_client_input(ClientIterator& client) {
         {
             if (result.type == CMD_CHANNEL)
             {
-                if (_channels.empty())
-                {
-                    Channel c(result.reply);
-                    c.add_user(client->first);
+                if (does_channel_exist(result.reply))
+                    add_user_to_channel(result.reply, client->first);
+                else {
+                    Channel c(result.reply, client->first);
                     _channels.push_back(c);
                 }
-                else
-                    _channels[0].add_user(client->first);
             }
             else if (result.type != CMD_CHECK_USER)
-                this->send_to_all(client, result);
+                send_to_all(client, result);
             else
             {
                 if (client->second.password == this->_password)

@@ -42,10 +42,15 @@ private:
     bool accept_client();
     void drop_client(ClientIterator& client);
 
-    void send_content(int fd, std::string message);
+    void send_message(int fd, std::string message);
     void send_to_all(ClientIterator& client, CommandResult result);
 
+    bool does_channel_exist(std::string name);
+
+
     bool all_info(Client& client);
+    void add_user_to_channel(std::string name, int fd);
+    void delete_user_from_channels(int fd);
 
     bool handle_client_input(ClientIterator& client);
 };

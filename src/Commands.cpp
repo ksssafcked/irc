@@ -32,7 +32,7 @@ CommandResult Commands::cap_command_handler(Client* client, std::vector< Token >
 
     CommandResult result;
     if (args[1].data == "LS") {
-        result.type = CRD_RESULT_REPLY; // TODO: change this
+        result.type = CMD_RESULT_REPLY; // TODO: change this
         result.reply = "CAP * LS :\r\n";
     } else if (args[1].data == "END") {
         result.type = CMD_NO_RESULT;
@@ -72,14 +72,14 @@ CommandResult Commands::password_command_handler(Client* client, std::vector< To
 
 CommandResult Commands::message_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
-    if (args.size() < 5 || !client->registered) {
+    if (args.size() < 4 || !client->registered) {
         result.type = CMD_NO_RESULT;
         return result;
     }
-    result.type = CRD_RESULT_BROADCAST;
-    result.reply = args[2].data;
+    result.type = CMD_RESULT_BROADCAST;
+    result.reply = args[1].data;
     result.message.clear();
-    for (size_t i = 4; i < args.size(); i++)
+    for (size_t i = 3; i < args.size(); i++)
     {
         result.message += args[i].data;
     }
@@ -89,14 +89,14 @@ CommandResult Commands::message_command_handler(Client* client, std::vector< Tok
 CommandResult Commands::join_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
 
-    if (args.size() != 3) {
+    if (args.size() != 2 || !utils::is_channel(args[1].data)) {
         result.type = CMD_NO_RESULT;
         return result;
     }
     result.type = CMD_CHANNEL;
-    result.reply = args[2].data;
+    result.reply = args[1].data;
     result.message = client->username;
-    std::cout << "[debug][client]: creating channel : [" << args[2].data << "]\n";
+    std::cout << "[debug][client]: creating channel : [" << args[1].data << "]\n";
 
     return result;
 }

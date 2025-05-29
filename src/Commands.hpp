@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Client.hpp"
+#include "Common.hpp"
 
 #include <map>
 #include <string>
@@ -12,9 +13,9 @@ enum CommandResultType {
     CMD_CHANNEL,                    // create or join channel
     CMD_CHECK_USER,                 // server needs to check password
     CMD_NO_RESULT,                  // no reply needed
-    CRD_RESULT_REPLY,               // reply only to client who the sent the command
-    CRD_RESULT_REPLY_AND_BROADCAST, // reply to client who sent the command and broadcast message to other clients
-    CRD_RESULT_BROADCAST,           // broadcast message to other clients
+    CMD_RESULT_REPLY,               // reply only to client who the sent the command
+    CMD_RESULT_REPLY_AND_BROADCAST, // reply to client who sent the command and broadcast message to other clients
+    CMD_RESULT_BROADCAST,           // broadcast message to other clients
 };
 
 struct CommandResult {

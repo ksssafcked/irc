@@ -4,15 +4,17 @@
 #include <string>
 #include <iostream>
 
-class Channel {
+struct Channel {
+    
+    std::string channel_name;
+    std::vector <int> users;
+
+    Channel(std::string name, int fd);
+
+    void add_user(int fd);
+    void delete_user(int fd);
+    std::string getName();
+
     private:
         Channel();
-
-        std::string _channel_name;
-        public:
-        std::vector <int> _users;
-        Channel(std::string channel_name);
-
-        void add_user(int fd);
-        std::string getName();
 };
