@@ -11,6 +11,7 @@ void Commands::register_commands() {
     _commands["PASS"] = Commands::password_command_handler;
     _commands["JOIN"] = Commands::join_command_handler;
     _commands["PRIVMSG"] = Commands::message_command_handler;
+    _commands["QUIT"] = Commands::quit_command_handler;
 }
 
 CommandResult Commands::execute(const std::string& name, Client* client, std::vector< Token >& args) {
@@ -98,5 +99,19 @@ CommandResult Commands::join_command_handler(Client* client, std::vector< Token 
     result.message = client->username;
     std::cout << "[debug][client]: creating channel : [" << args[1].data << "]\n";
 
+    return result;
+}
+
+CommandResult Commands::quit_command_handler(Client* client, std::vector< Token >&args) {
+    CommandResult result;
+
+    if (args.size() != 3){
+        result.type = CMD_NO_RESULT;
+        return result;
+    }
+    result.type = CMD_QUIT;
+    result.reply = args[2].data;    
+    std::cout << "[debug][client]: user leaved: [" << client->username << "]\n"; 
+    
     return result;
 }

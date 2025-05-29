@@ -102,7 +102,7 @@ bool Server::setup_socket() {
     server_addr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-        std::cerr << ANSI_RED << "[error][server]: bin() failed!\n" << ANSI_RESET;
+        std::cerr << ANSI_RED << "[error][server]: bind() failed!\n" << ANSI_RESET;
         return false;
     }
 
@@ -249,10 +249,9 @@ void Server::add_user_to_channel(std::string name, int fd) {
 
 void Server::delete_user_from_channels(int fd) {
     for (size_t i = 0; i < _channels.size(); i++) {
-        std::vector <int> users = _channels[i].users;
-        for (size_t j = 0; j < users.size(); j++) {
-            if (users[j] == fd) {
-                _channels[i].users.erase(users.begin() + j);
+        for (size_t j = 0; j < _channels[i].users.size(); j++) {
+            if (_channels[i].users[j] == fd) {
+                _channels[i].users.erase(_channels[i].users.begin() + j);
             }
         }
     }
@@ -292,6 +291,9 @@ bool Server::handle_client_input(ClientIterator& client) {
                     Channel c(result.reply, client->first);
                     _channels.push_back(c);
                 }
+            } else if (result.type == CMD_QUIT){
+                drop_client(client);
+                return false;
             }
             else if (result.type != CMD_CHECK_USER)
                 send_to_all(client, result);
