@@ -51,7 +51,7 @@ test: re
 	@./build/bin/ircserv 6667 42
 
 tests: re
-	@python ./test/test.py
+	@python3 ./test/test.py
 
 irssi:
 	@docker build . -t irssi

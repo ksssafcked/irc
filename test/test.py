@@ -51,12 +51,31 @@ def recv(sock, timeout=2):
     except socket.timeout:
         return ''
 
+def connect_and_join(client):
+    send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK bruh\r\nUSER bruh b\r\n")
+    send_no_crlf(client, "JOIN #ledion\r\n")
 
 def message_format():
     print("[test][message_format]")
     print(ANSI_CYAN + "[info][test]: connecting client" + ANSI_RESET)
     client = connect_client()
+    client2 = connect_client()
+    
 
+    connect_and_join(client)
+    time.sleep(1)
+    connect_and_join(client2)
+    time.sleep(1)
+    send_no_crlf(client, "PRIVMSG #ledion :haha\r\n")
+    # send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK bruh\r\nUSER bruh b\r\n")
+    # time.sleep(1)
+    # send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK bruh\r\nUSER bruh b\r\n")
+    # time.sleep(1)
+    # send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK bruh\r\nUSER\tbruh b\r\n")
+    # time.sleep(1)
+    # send_no_crlf(client, "\r\r\r\x07")
+    # time.sleep(1)
+    # send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK bruh\r\nUSER bruh b\r\n")
     # send_no_crlf(client, "CAP LS 302\n")
     # time.sleep(1)
     # send_no_crlf(client, "CAP LS 302\r")
@@ -66,17 +85,18 @@ def message_format():
     #
     # send_no_crlf(client, "CAP LS 302\n     \n\n\n")
     # time.sleep(1)
-    send_no_crlf(client, "CAP LS 302\rNICK bruh\rUSER bruh\r")
-    time.sleep(1)
-    send_no_crlf(client, "CAP LS 302\nNICK bruh\nUSER bruh\n")
-    time.sleep(1)
-    send_no_crlf(client, "CAP LS 302\r\nNICK bruh\r\nUSER bruh\r\n")
-    time.sleep(1)
+    # send_no_crlf(client, "CAP LS 302\rNICK bruh\rUSER bruh\r")
+    # time.sleep(1)
+    # send_no_crlf(client, "CAP LS 302\nNICK bruh\nUSER bruh\n")
+    # time.sleep(1)
+    # send_no_crlf(client, "CAP LS 302\r\nNICK bruh\r\nUSER bruh\r\n")
+    # time.sleep(1)
 
     # response = recv(client)
     # print("response:" + response)
 
     client.close()
+    client2.close()
 
 def basic_connection():
     print("[test][basic_connection]")
