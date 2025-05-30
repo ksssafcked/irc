@@ -5,7 +5,8 @@
 #include <iostream>
 
 bool Client::is_sending(CommandResult result){
-    if (result.type == CMD_RESULT_REPLY || result.type == CMD_RESULT_BROADCAST || result.type == CMD_RESULT_REPLY_AND_BROADCAST || result.type == CMD_CHECK_USER || result.type == CMD_CHANNEL || result.type == CMD_QUIT){
+    if (result.type == CMD_RESULT_REPLY || result.type == CMD_RESULT_BROADCAST || result.type == CMD_RESULT_REPLY_AND_BROADCAST 
+            || result.type == CMD_CHECK_USER || result.type == CMD_CHANNEL || result.type == CMD_QUIT || result.type == CMD_CHECK_PASS){
         return true;
     }
     return false;

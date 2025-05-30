@@ -47,6 +47,7 @@ private:
 
     bool does_channel_exist(std::string name);
 
+    void check_infos(ClientIterator& client, CommandResult result);
 
     bool all_info(Client& client);
     void add_user_to_channel(std::string name, int fd);

@@ -29,10 +29,13 @@ CommandResult Commands::execute(const std::string& name, Client* client, std::ve
 
 CommandResult Commands::cap_command_handler(Client* client, std::vector< Token >& args) {
     (void)client;
-    (void)args;
-
     CommandResult result;
-    if (args[1].data == "LS") {
+
+    if (args.size() != 2 || args.size() != 3) {
+        result.type = CMD_NO_RESULT;
+        return result;
+    }
+    else if (args[1].data == "LS") {
         result.type = CMD_RESULT_REPLY; // TODO: change this
         result.reply = "CAP * LS :\r\n";
     } else if (args[1].data == "END") {
@@ -44,36 +47,45 @@ CommandResult Commands::cap_command_handler(Client* client, std::vector< Token >
 }
 
 CommandResult Commands::nick_command_handler(Client* client, std::vector< Token >& args) {
-    (void)args;
-
     CommandResult result;
-    client->nickname = args[1].data;
-    result.type = CMD_NO_RESULT;
-    result.reply = "[debug][client]: client connected with nickname: [" + client->nickname + "]\n";
+
+    if (args.size() != 2 || client->state != S_USER)
+        result.type = CMD_NO_RESULT;
+    else {
+        result.type = CMD_CHECK_USER;
+        result.reply = args[1].data;
+    }
     return result;
 }
 
 
 CommandResult Commands::username_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
-    client->username = args[1].data;
-    client->hostname = args[2].data;
-    result.type = CMD_NO_RESULT;
-    result.reply = "[debug][client]: client connected with username: [" + client->username + "]\n";
 
+    if (args.size() < 3 || client->state != S_USER)
+        result.type = CMD_NO_RESULT;
+    else {
+        result.type = CMD_CHECK_USER;
+        result.reply = args[1].data;
+        result.message = args[2].data;
+    }
     return result;
 }
 
 CommandResult Commands::password_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
-    client->password = args[1].data;
-    result.type = CMD_CHECK_USER;                
+    if (args.size() != 2 || client->state != S_PASS){
+        result.type = CMD_NO_RESULT;
+    } else {
+        result.type = CMD_CHECK_PASS;                
+        result.reply = args[1].data;
+    }
     return result;
 }
 
 CommandResult Commands::message_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
-    if (args.size() < 4 || !client->registered) {
+    if (args.size() < 4 || client->state != S_CONNECT) {
         result.type = CMD_NO_RESULT;
         return result;
     }
@@ -90,7 +102,7 @@ CommandResult Commands::message_command_handler(Client* client, std::vector< Tok
 CommandResult Commands::join_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
 
-    if (args.size() != 2 || !utils::is_channel(args[1].data)) {
+    if (args.size() != 2 || client->state != S_CONNECT || !utils::is_channel(args[1].data)) {
         result.type = CMD_NO_RESULT;
         return result;
     }
@@ -110,8 +122,11 @@ CommandResult Commands::quit_command_handler(Client* client, std::vector< Token 
         return result;
     }
     result.type = CMD_QUIT;
-    result.reply = args[2].data;    
-    std::cout << "[debug][client]: user leaved: [" << client->username << "]\n"; 
+    result.reply = args[2].data;
+    if (client->username.empty())
+        std::cout << "[debug][client]: user leaved: [NO_USERNAME]\n";
+    else
+        std::cout << "[debug][client]: user leaved: [" << client->username << "]\n"; 
     
     return result;
 }

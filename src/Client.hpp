@@ -10,6 +10,12 @@ enum TokenKind {
     TK_NUMBER,
 };
 
+enum ConnectionState {
+    S_PASS,
+    S_USER,
+    S_CONNECT,
+};
+
 struct CommandResult;
 
 struct Token {
@@ -20,8 +26,7 @@ struct Token {
 };
 
 struct Client {
-    bool registered; // if the client is fully connected or not
-    bool connected;
+    int state;
 
     std::string input;
     std::string nickname;
@@ -31,7 +36,7 @@ struct Client {
     std::string hostname;
 
 
-    Client() : registered(false), connected(false) {}
+    Client() : state(S_PASS) {}
 
     bool process_input(CommandResult& result);
 

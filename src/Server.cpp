@@ -72,12 +72,11 @@ void Server::run() {
                 if (!handle_client_input(client))
                     break;
             }
-            if (all_info(client->second) && !client->second.connected) {
-                std::cout << ANSI_RED << "All info !\n" << ANSI_RESET;
-                send_message(client->first, \
-                    ":ircserver 001 " + client->second.nickname + " :Welcome to the IRC network, " + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + "\r\n");
-                client->second.connected = true;
-            }
+            // if (client->second.state == S_CONNECT) {
+            //     
+                
+            //     client->second.connected = true;
+            // }
             // TODO: POLLOUT
         }
     }
@@ -229,7 +228,7 @@ void Server::send_to_all(ClientIterator& client, CommandResult result) {
 //     }
 // }
 
-bool Server::all_info(Client& client){ return (client.registered && !client.username.empty() && !client.nickname.empty()); }
+bool Server::all_info(Client& client){ return (!client.username.empty() && !client.hostname.empty() && !client.nickname.empty()); }
 
 bool Server::does_channel_exist(std::string name) {
     for (size_t i = 0; i < _channels.size(); i++) {
@@ -257,6 +256,48 @@ void Server::delete_user_from_channels(int fd) {
     }
 }
 
+void Server::check_infos(ClientIterator& client, CommandResult result) {
+    std::cout << "Username : " << result.reply << std::endl;
+    if (result.type == CMD_CHECK_PASS) { // if we check the password
+        if (result.reply == this->_password)
+        {
+            client->second.state = S_USER;
+            std::cout << ANSI_RED << "Good password!\n" << ANSI_RESET;
+        }
+    }
+    else { // if we check for username or nickname
+        if (result.message.empty()) // check only nickname
+        {
+            for (ClientIterator clients = _client_map.begin(); clients != _client_map.end(); clients++) {
+                if (clients->first != client->first && clients->second.nickname == result.reply)
+                {
+                    return; // if the nickname is already used
+                }
+            }
+            client->second.nickname = result.reply;
+            std::cout << ANSI_RED << "New nick !\n" << ANSI_RESET;
+        }
+        else {   // check username and hostname
+            for (ClientIterator clients = _client_map.begin(); clients != _client_map.end(); clients++) {
+                if (clients->first != client->first && (clients->second.username == result.reply || clients->second.hostname == result.message))
+                {
+                    return; // if the username is already used
+                }
+            }
+            client->second.username = result.reply;
+            client->second.hostname = result.message;
+            std::cout << ANSI_RED << "New username !\n" << ANSI_RESET;
+        }
+        if (all_info(client->second)) {
+            client->second.state++;
+            send_message(client->first, \
+                    ":ircserver 001 " + client->second.nickname + " :Welcome to the IRC network, " + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname + "\r\n");
+            std::cout << ANSI_RED << "All info !\n" << ANSI_RESET;
+        }
+    }
+    
+}
+
 bool Server::handle_client_input(ClientIterator& client) {
     // std::cout << "[info][server]: handling input from client (" << client->first << ")\n";
 
@@ -272,9 +313,7 @@ bool Server::handle_client_input(ClientIterator& client) {
     client->second.input = std::string(buffer, bytes_read);
     // std::cout << ANSI_PINK << "[debug][server]: input from client (" << client->second.input << ")\n" << ANSI_RESET;
 
-    std::cout << ANSI_RED << "channels :" << _channels.size() << std::endl;
-    if (_channels.size() > 0)
-        std::cout << ANSI_RED << "users :" << _channels[0].users.size() << std::endl << ANSI_RESET;
+    
 
 
     CommandResult result;
@@ -291,20 +330,17 @@ bool Server::handle_client_input(ClientIterator& client) {
                     Channel c(result.reply, client->first);
                     _channels.push_back(c);
                 }
+                std::cout << ANSI_RED << "channels :" << _channels.size() << std::endl;
+                if (_channels.size() > 0)
+                    std::cout << ANSI_RED << "users :" << _channels[0].users.size() << std::endl << ANSI_RESET;
             } else if (result.type == CMD_QUIT){
                 drop_client(client);
                 return false;
+            }else if (result.type == CMD_CHECK_USER || result.type == CMD_CHECK_PASS) {
+                check_infos(client, result);
             }
-            else if (result.type != CMD_CHECK_USER)
-                send_to_all(client, result);
             else
-            {
-                if (client->second.password == this->_password)
-                {
-                    client->second.registered = true;
-                    std::cout << ANSI_RED << "BRAVO !\n" << ANSI_RESET;
-                }
-            }
+                send_to_all(client, result);
         }
     }
 
