@@ -314,7 +314,14 @@ bool Server::handle_client_input(ClientIterator& client) {
     // std::cout << ANSI_PINK << "[debug][server]: input from client (" << client->second.input << ")\n" << ANSI_RESET;
 
     
-
+    for (std::string::iterator it = client->second.input.begin(); it != client->second.input.end(); it++)
+    {
+        if (*it >= '\x01' && *it <= '\x07')
+        {
+            client->second.input.erase(it);
+            it--;
+        }
+    }
 
     CommandResult result;
     while (!client->second.input.empty())

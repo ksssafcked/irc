@@ -4,13 +4,13 @@
 
 #include <iostream>
 
-bool Client::is_sending(CommandResult result){
-    if (result.type == CMD_RESULT_REPLY || result.type == CMD_RESULT_BROADCAST || result.type == CMD_RESULT_REPLY_AND_BROADCAST 
-            || result.type == CMD_CHECK_USER || result.type == CMD_CHANNEL || result.type == CMD_QUIT || result.type == CMD_CHECK_PASS){
-        return true;
-    }
-    return false;
-}
+// bool Client::is_sending(CommandResult result){
+//     if (result.type == CMD_RESULT_REPLY || result.type == CMD_RESULT_BROADCAST || result.type == CMD_RESULT_REPLY_AND_BROADCAST 
+//             || result.type == CMD_CHECK_USER || result.type == CMD_CHANNEL || result.type == CMD_QUIT || result.type == CMD_CHECK_PASS){
+//         return true;
+//     }
+//     return false;
+// }
 
 bool Client::process_input(CommandResult& result) {
     std::cout << ANSI_CYAN << "[debug][server]: parsing client input: [" << this->input << "]\n" << ANSI_RESET;
@@ -35,16 +35,22 @@ bool Client::process_input(CommandResult& result) {
             std::cout << "token(" << itr->kind << ", [" << itr->data << "]\n";
         }
 
-        result = Commands::execute(tokens.begin()->data, this, tokens);
-        if (is_sending(result))
+        if (!tokens.size())
         {
-            std::cout << ANSI_CYAN << "[debug][client]: HAHAH '" << tokens.begin()->data << "' not found\n" << ANSI_RESET;
+            input.clear();
+            return false;
+        }
+
+        result = Commands::execute(tokens.begin()->data, this, tokens);
+        if (result.type > CMD_NO_RESULT)
+        {
+            std::cout << ANSI_CYAN << "[debug][client]: command: '" << tokens.begin()->data << "' found\n" << ANSI_RESET;
             return true;
         }
         else
         {
-             if (result.type == CMD_RESULT_NOT_FOUND) {
-                std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "\n" << ANSI_RESET;
+            if (result.type == CMD_RESULT_NOT_FOUND) {
+                std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' not found\n" << ANSI_RESET;
             } else if (result.type == CMD_RESULT_FAILED) {
                 std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' failed\n" << ANSI_RESET;
             } else if (result.type == CMD_NO_RESULT){
@@ -122,6 +128,8 @@ Token Client::add_full_message(const std::string& message, size_t& i) {
 }
 
 bool Client::tokenize_message(const std::string& message, std::vector< Token >& tokens) {
+
+    
     size_t i = 0;
     while (i < message.size()) {
         char curr = message[i];
@@ -186,6 +194,5 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
         }
         i++;
     }
-
     return true;
 }
