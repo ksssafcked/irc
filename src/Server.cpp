@@ -259,11 +259,12 @@ void Server::add_user_to_channel(std::string name, int fd, int mode) {
 
 void Server::kick_user(Channel& channel, int fd, Client& client, std::string message) {
     std::string first = ":" + client.nickname + "!" + client.username + "@" + client.hostname + " KICK "
-                        + channel.channel_name + " " + _client_map[fd].username + " " + message + "\r\n";
+                        + channel.channel_name + " " + _client_map[fd].nickname + " " + message + "\r\n";
     send_message(fd, first);
-    std::string reply = ":" + _client_map[fd].nickname + "!" + _client_map[fd].username + "@" + _client_map[fd].hostname
+    /*std::string reply = ":" + _client_map[fd].nickname + "!" + _client_map[fd].username + "@" +
+    _client_map[fd].hostname
                         + " PART " + channel.channel_name + " :Kicked by " + client.nickname + " " + message + "\r\n";
-    send_message(fd, reply);
+    send_message(fd, reply);*/
 }
 
 void Server::kick_user(Channel& channel, int fd, std::string user, std::string message) {
@@ -291,8 +292,10 @@ void Server::check_kick(ClientIterator& client, CommandResult result) {
     if (j == _channels[i].operators.size())
         return;
     for (size_t k = 0; k < _channels[i].users.size(); k++) {
-        if (_channels[i].users[k] == fd)
+        if (_channels[i].users[k] == fd) {
             kick_user(_channels[i], fd, client->second, result.extra);
+            delete_user_from_channels(fd);
+        }
     }
 }
 
