@@ -145,10 +145,8 @@ CommandResult Commands::mode_command_handler(Client* client, std::vector< Token 
         result.reply = args[1].data;
         result.message = args[2].data;
     }
-    if (args.size() == 4) {
-        result.extra == args[3].data;
-        std::cout << "[debug][client]: mode extra: [" << result.extra << "]\n";
-    }
+    if (args.size() == 4)
+        result.extra = args[3].data;
     return (result);
 }
 

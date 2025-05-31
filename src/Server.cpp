@@ -242,8 +242,8 @@ void Server::add_user_to_channel(CommandResult result, int fd, int mode) {
                     }
                 }
                 if (_channels[i].need_pass) {
-                    std::cout << ANSI_RED << "PASS: " << result.extra << " PASS2: " << _channels[i].password
-                              << ANSI_RESET << "\n";
+                    // std::cout << ANSI_RED << "PASS: " << result.extra << " PASS2: " << _channels[i].password
+                    << ANSI_RESET << "\n";
                     if (result.extra == _channels[i].password) {
                         _channels[i].add_user(fd, mode);
                     }
