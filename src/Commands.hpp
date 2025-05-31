@@ -9,14 +9,16 @@
 enum CommandResultType {
     CMD_RESULT_NOT_FOUND,
     CMD_RESULT_FAILED,
-    CMD_NO_RESULT,                  // no reply needed
+    CMD_NO_RESULT, // no reply needed
     CMD_QUIT,
-    CMD_CHANNEL,                    // create or join channel
-    CMD_CHECK_USER,                 // server needs to check password
+    CMD_CHANNEL, // create or join channel
+    CMD_INVITE,
+    CMD_CHECK_USER, // server needs to check password
     CMD_CHECK_PASS,
     CMD_RESULT_REPLY,               // reply only to client who the sent the command
     CMD_RESULT_REPLY_AND_BROADCAST, // reply to client who sent the command and broadcast message to other clients
     CMD_RESULT_BROADCAST,           // broadcast message to other clients
+    CMD_CHANGE_MODE,
 };
 
 struct CommandResult {
@@ -41,5 +43,9 @@ private:
     static CommandResult password_command_handler(Client* client, std::vector< Token >& args);
     static CommandResult message_command_handler(Client* client, std::vector< Token >& args);
     static CommandResult join_command_handler(Client* client, std::vector< Token >& args);
-    static CommandResult quit_command_handler(Client* client, std::vector< Token >&args);
+    static CommandResult quit_command_handler(Client* client, std::vector< Token >& args);
+    static CommandResult kick_command_handler(Client* client, std::vector< Token >& args);
+    static CommandResult mode_command_handler(Client* client, std::vector< Token >& args);
+    static CommandResult topic_command_handler(Client* client, std::vector< Token >& args);
+    static CommandResult invite_command_handler(Client* client, std::vector< Token >& args);
 };

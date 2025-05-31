@@ -4,14 +4,6 @@
 
 #include <iostream>
 
-// bool Client::is_sending(CommandResult result){
-//     if (result.type == CMD_RESULT_REPLY || result.type == CMD_RESULT_BROADCAST || result.type == CMD_RESULT_REPLY_AND_BROADCAST 
-//             || result.type == CMD_CHECK_USER || result.type == CMD_CHANNEL || result.type == CMD_QUIT || result.type == CMD_CHECK_PASS){
-//         return true;
-//     }
-//     return false;
-// }
-
 bool Client::process_input(CommandResult& result) {
     std::cout << ANSI_CYAN << "[debug][server]: parsing client input: [" << this->input << "]\n" << ANSI_RESET;
 
@@ -21,55 +13,50 @@ bool Client::process_input(CommandResult& result) {
         return false;
     }
 
-    // input.clear();
+    std::cout << ANSI_CYAN << "[debug][server]: processing message: [" << message << "]\n" << ANSI_RESET;
 
-        std::cout << ANSI_CYAN << "[debug][server]: processing message: [" << message << "]\n" << ANSI_RESET;
+    std::vector< Token > tokens;
+    if (!tokenize_message(message, tokens)) {
+        std::cout << ANSI_RED << "[error][server]: failed to tokenize client message!\n" << ANSI_RESET;
+        return false;
+    }
 
-        std::vector< Token > tokens;
-        if (!tokenize_message(message, tokens)) {
-            std::cout << ANSI_RED << "[error][server]: failed to tokenize client message!\n" << ANSI_RESET;
-            return false;
+    for (TokenIterator itr = tokens.begin(); itr != tokens.end(); itr++) {
+        std::cout << "token(" << itr->kind << ", [" << itr->data << "]\n";
+    }
+
+    if (!tokens.size()) {
+        input.clear();
+        return false;
+    }
+
+    result = Commands::execute(tokens.begin()->data, this, tokens);
+    if (result.type > CMD_NO_RESULT) {
+        std::cout << ANSI_CYAN << "[debug][client]: command: '" << tokens.begin()->data << "' found\n" << ANSI_RESET;
+        return true;
+    } else {
+        if (result.type == CMD_RESULT_NOT_FOUND) {
+            std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' not found\n"
+                      << ANSI_RESET;
+        } else if (result.type == CMD_RESULT_FAILED) {
+            std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' failed\n"
+                      << ANSI_RESET;
+        } else if (result.type == CMD_NO_RESULT) {
+            std::cout << ANSI_CYAN << result.reply << ANSI_RESET;
         }
+        return false;
+    }
+    // if (result.type == CMD_RESULT_NOT_FOUND) {
+    //     std::cout << "[debug][client]: command '" << tokens.begin()->data << "' not found\n";
+    // } else if (result.type == CMD_RESULT_FAILED) {
+    //     std::cout << "[debug][client]: command '" << tokens.begin()->data << "' failed\n";
+    // }
 
-        for (TokenIterator itr = tokens.begin(); itr != tokens.end(); itr++) {
-            std::cout << "token(" << itr->kind << ", [" << itr->data << "]\n";
-        }
-
-        if (!tokens.size())
-        {
-            input.clear();
-            return false;
-        }
-
-        result = Commands::execute(tokens.begin()->data, this, tokens);
-        if (result.type > CMD_NO_RESULT)
-        {
-            std::cout << ANSI_CYAN << "[debug][client]: command: '" << tokens.begin()->data << "' found\n" << ANSI_RESET;
-            return true;
-        }
-        else
-        {
-            if (result.type == CMD_RESULT_NOT_FOUND) {
-                std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' not found\n" << ANSI_RESET;
-            } else if (result.type == CMD_RESULT_FAILED) {
-                std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' failed\n" << ANSI_RESET;
-            } else if (result.type == CMD_NO_RESULT){
-                std::cout << ANSI_CYAN << result.reply << ANSI_RESET;
-            }
-            return false;
-        }
-        // if (result.type == CMD_RESULT_NOT_FOUND) {
-        //     std::cout << "[debug][client]: command '" << tokens.begin()->data << "' not found\n";
-        // } else if (result.type == CMD_RESULT_FAILED) {
-        //     std::cout << "[debug][client]: command '" << tokens.begin()->data << "' failed\n";
-        // }
-
-        // TODO: think of way to use result
+    // TODO: think of way to use result
 }
 
 void Client::skip_delimiter(std::string message, size_t& i) {
-    while (i < message.size())
-    {
+    while (i < message.size()) {
         if (message[i] == '\r')
             i++;
         else if (message[i] == '\n')
@@ -120,16 +107,15 @@ Token Client::add_full_message(const std::string& message, size_t& i) {
     if (utils::is_space(message[i]))
         i++;
     size_t j = i;
-    while (j < message.size() && message[j] != '\r' && message[j] != '\n' && message[j] != ':' )
+    while (j < message.size() && message[j] != '\r' && message[j] != '\n' && message[j] != ':')
         j++;
-    Token t(TK_STRING, message.substr(i, j-i));
+    Token t(TK_STRING, message.substr(i, j - i));
     i = j;
     return t;
 }
 
 bool Client::tokenize_message(const std::string& message, std::vector< Token >& tokens) {
 
-    
     size_t i = 0;
     while (i < message.size()) {
         char curr = message[i];
@@ -147,7 +133,7 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
             tokens.push_back(Token(TK_WORD, message.substr(start, i - start)));
             continue;
         } else if (curr == '#') {
-           size_t start = i;
+            size_t start = i;
 
             i++; // skip the #
             // keep going until we don't find a letter
@@ -180,14 +166,12 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
 
             tokens.push_back(Token(TK_NUMBER, message.substr(start, i - start)));
             continue;
-        } 
-        else if (curr == ':' && i + 1 < message.size()) {
-            tokens.push_back(Token(curr, message.substr(i,1)));
+        } else if (curr == ':' && i + 1 < message.size()) {
+            tokens.push_back(Token(curr, message.substr(i, 1)));
             i++;
             tokens.push_back(add_full_message(message, i));
             continue;
-        }
-        else {
+        } else {
             tokens.push_back(Token(curr, message.substr(i, 1)));
             i++;
             continue;
