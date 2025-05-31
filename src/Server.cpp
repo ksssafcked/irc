@@ -227,20 +227,27 @@ bool Server::does_user_exist(std::string name, int& fd) {
     return false;
 }
 
-void Server::add_user_to_channel(std::string name, int fd, int mode) {
+void Server::add_user_to_channel(CommandResult result, int fd, int mode) {
+    std::string name = result.reply;
     for (size_t i = 0; i < _channels.size(); i++) {
         if (mode == CH_ADD_USER) { // add user in users vector
             if (_channels[i].channel_name != name)
                 continue;
-            else if (!_channels[i].perm_invite) {
+            if (!_channels[i].perm_invite) {
                 for (size_t j = 0; j < _channels[i].invites.size(); j++) {
                     if (_channels[i].invites[j] == fd) {
                         _channels[i].invites.erase(_channels[i].invites.begin() + j);
-                        break;
+                        _channels[i].add_user(fd, mode);
+                        return;
                     }
                 }
-                _channels[i].add_user(fd, mode);
-                return;
+                if (_channels[i].need_pass) {
+                    std::cout << ANSI_RED << "PASS: " << result.extra << " PASS2: " << _channels[i].password
+                              << ANSI_RESET << "\n";
+                    if (result.extra == _channels[i].password) {
+                        _channels[i].add_user(fd, mode);
+                    }
+                }
             } else {
                 for (size_t j = 0; j < _channels[i].invites.size(); j++) {
                     if (_channels[i].invites[j] == fd) {
@@ -258,18 +265,14 @@ void Server::add_user_to_channel(std::string name, int fd, int mode) {
 }
 
 void Server::kick_user(Channel& channel, int fd, Client& client, std::string message) {
-    std::string first = ":" + client.nickname + "!" + client.username + "@" + client.hostname + " KICK "
+    std::string reply = ":" + client.nickname + "!" + client.username + "@" + client.hostname + " KICK "
                         + channel.channel_name + " " + _client_map[fd].nickname + " " + message + "\r\n";
-    send_message(fd, first);
-    /*std::string reply = ":" + _client_map[fd].nickname + "!" + _client_map[fd].username + "@" +
-    _client_map[fd].hostname
-                        + " PART " + channel.channel_name + " :Kicked by " + client.nickname + " " + message + "\r\n";
-    send_message(fd, reply);*/
+    send_message(fd, reply);
 }
 
 void Server::kick_user(Channel& channel, int fd, std::string user, std::string message) {
     std::string reply =
-        ":" + user + " PART " + channel.channel_name + " " + _client_map[fd].username + " " + message + "\r\n";
+        ":" + user + " KICK " + channel.channel_name + " " + _client_map[fd].nickname + " " + message + "\r\n";
     send_message(fd, reply);
 }
 
@@ -319,22 +322,13 @@ void Server::delete_channel(size_t i) {
 }
 
 void Server::delete_user_from_channels(int fd) {
-    for (size_t i = 0; i < _channels.size(); i++) {
-        for (size_t j = 0; j < _channels[i].users.size(); j++) {
-            if (_channels[i].users[j] == fd) {
-                _channels[i].users.erase(_channels[i].users.begin() + j);
-                break;
-            }
-        }
-        for (size_t k = 0; k < _channels[i].operators.size(); k--) {
-            if (_channels[i].operators[k] == fd) {
-                _channels[i].operators.erase(_channels[i].operators.begin() + k);
-                break;
-            }
-        }
+    for (size_t i = 0; i < _channels.size();) {
+        _channels[i].delete_from_all(fd);
         if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0) {
             delete_channel(i);
+            continue;
         }
+        i++;
     }
 }
 
@@ -411,11 +405,17 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
         }
         for (j = 0; j < _channels[i].operators.size(); j++) {
             if (_channels[i].operators[j] == client->first) {
-                if (result.message == "+") {
+                if (result.message == "+i") {
                     _channels[i].perm_invite = true;
                     return;
-                } else if (result.message == "-") {
+                } else if (result.message == "-i") {
                     _channels[i].perm_invite = false;
+                } else if (result.message == "+k" && !result.extra.empty()) {
+                    _channels[i].need_pass = true;
+                    _channels[i].password = result.extra;
+                } else if (result.message == "-k") {
+                    _channels[i].need_pass = false;
+                    _channels[i].password.clear();
                 }
             }
         }
@@ -425,7 +425,7 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
 void Server::handle_channel(ClientIterator& client, CommandResult result) {
     if (result.type == CMD_CHANNEL) {
         if (does_channel_exist(result.reply))
-            add_user_to_channel(result.reply, client->first, CH_ADD_USER);
+            add_user_to_channel(result, client->first, CH_ADD_USER);
         else {
             Channel c(result.reply, client->first);
             _channels.push_back(c);
@@ -436,14 +436,14 @@ void Server::handle_channel(ClientIterator& client, CommandResult result) {
     } else {
         int fd;
         std::string mess;
-        if (does_channel_exist(result.message)) {
-            if (can_user_invite(client, result.message) && does_user_exist(result.reply, fd)) {
+        if (does_channel_exist(result.reply)) {
+            if (can_user_invite(client, result.reply) && does_user_exist(result.message, fd)) {
                 mess = ":" + client->second.username + "!" + _client_map[fd].username + "@" + _client_map[fd].hostname;
                 //+ "!" + _client_map[fd].username + "@" + _client_map[fd].hostname
-                mess += " INVITE " + result.reply + " " + result.message + "\r\n";
+                mess += " INVITE " + result.message + " " + result.reply + "\r\n";
                 // mess = ":server JOIN " + result.message + "\r\n";
                 send_message(fd, mess);
-                add_user_to_channel(result.message, fd, CH_ADD_INVITE);
+                add_user_to_channel(result, fd, CH_ADD_INVITE);
             }
         } else { // TODO : error channel doesn't exist}
         }

@@ -1,7 +1,8 @@
 #include "Channel.hpp"
 
 Channel::Channel(std::string name, int fd)
-    : channel_name(name), topic("Regular channel, nothing special!"), perm_invite(false), perm_topic(false) {
+    : channel_name(name), topic("Regular channel, nothing special!"), perm_invite(false), perm_topic(false),
+      need_pass(false) {
     users.push_back(fd);
     operators.push_back(fd);
 }
@@ -19,6 +20,28 @@ void Channel::delete_user(int fd) {
     for (size_t i = 0; i < users.size(); i++) {
         if (users[i] == fd)
             users.erase(users.begin() + i);
+    }
+}
+
+void Channel::delete_from_all(int fd) {
+    for (size_t i = 0; i < users.size(); i++) {
+        if (users[i] == fd) {
+            users.erase(users.begin() + i);
+            break;
+        }
+    }
+    for (size_t j = 0; j < operators.size(); j++) {
+        if (operators[j] == fd) {
+            operators.erase(operators.begin() + j);
+            break;
+        }
+    }
+    for (size_t k = 0; k < invites.size();) {
+        if (invites[k] == fd) {
+            invites.erase(invites.begin() + k);
+            continue;
+        }
+        k++;
     }
 }
 

@@ -103,13 +103,15 @@ CommandResult Commands::message_command_handler(Client* client, std::vector< Tok
 CommandResult Commands::join_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
 
-    if (args.size() != 2 || client->state != S_CONNECT || !utils::is_channel(args[1].data)) {
+    if (args.size() < 2 || args.size() > 3 || client->state != S_CONNECT || !utils::is_channel(args[1].data)) {
         result.type = CMD_NO_RESULT;
         return result;
     }
     result.type = CMD_CHANNEL;
     result.reply = args[1].data;
     result.message = client->username;
+    if (args.size() == 3)
+        result.extra = args[2].data;
     std::cout << "[debug][client]: creating channel : [" << args[1].data << "]\n";
 
     return result;
@@ -136,12 +138,16 @@ CommandResult Commands::mode_command_handler(Client* client, std::vector< Token 
     CommandResult result;
 
     (void)client;
-    if (args.size() < 3) {
+    if (args.size() < 3 || args.size() > 4) {
         result.type = CMD_RESULT_NOT_FOUND;
     } else {
         result.type = CMD_CHANGE_MODE;
         result.reply = args[1].data;
         result.message = args[2].data;
+    }
+    if (args.size() == 4) {
+        result.extra == args[3].data;
+        std::cout << "[debug][client]: mode extra: [" << result.extra << "]\n";
     }
     return (result);
 }
@@ -169,8 +175,8 @@ CommandResult Commands::invite_command_handler(Client* client, std::vector< Toke
         result.type = CMD_NO_RESULT;
     else {
         result.type = CMD_INVITE;
-        result.reply = args[1].data;
-        result.message = args[2].data;
+        result.reply = args[2].data;
+        result.message = args[1].data;
     }
     return (result);
 }

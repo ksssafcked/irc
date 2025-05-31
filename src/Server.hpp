@@ -57,7 +57,7 @@ private:
     void delete_channel(size_t i);
     void change_mode(ClientIterator& client, CommandResult result);
     bool all_info(Client& client);
-    void add_user_to_channel(std::string name, int fd, int mode);
+    void add_user_to_channel(CommandResult result, int fd, int mode);
     void delete_user_from_channels(int fd);
     bool handle_client_input(ClientIterator& client);
 };

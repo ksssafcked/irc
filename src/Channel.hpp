@@ -14,17 +14,21 @@ struct Channel {
 
     std::string channel_name;
     std::string topic;
+    std::string password;
+
     std::vector< int > users;
     std::vector< int > operators;
     std::vector< int > invites;
 
     bool perm_invite;
     bool perm_topic;
+    bool need_pass;
 
     Channel(std::string name, int fd);
 
     void add_user(int fd, int mode);
     void delete_user(int fd);
+    void delete_from_all(int fd);
     std::string getName();
 
 private:
