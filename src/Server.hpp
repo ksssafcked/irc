@@ -43,14 +43,16 @@ private:
 
     bool accept_client();
     void drop_client(ClientIterator& client);
-
+    int getfd_byname(std::string name);
     void send_message(int fd, std::string message);
     void send_to_all(ClientIterator& client, CommandResult result);
     bool does_user_exist(std::string name, int& fd);
     bool does_channel_exist(std::string name);
     bool can_user_invite(ClientIterator& client, std::string channel);
     void handle_channel(ClientIterator& client, CommandResult result);
-
+    void kick_user(Channel& channel, int fd, Client& client, std::string message);
+    void kick_user(Channel& channel, int fd, std::string user, std::string message);
+    void check_kick(ClientIterator& client, CommandResult result);
     void check_infos(ClientIterator& client, CommandResult result);
     void delete_channel(size_t i);
     void change_mode(ClientIterator& client, CommandResult result);

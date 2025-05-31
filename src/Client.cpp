@@ -166,6 +166,14 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
 
             tokens.push_back(Token(TK_NUMBER, message.substr(start, i - start)));
             continue;
+        } else if (curr == '+' || curr == '-') {
+            size_t start = i++;
+
+            while (i < message.size() && utils::is_alpha(message[i])) {
+                i++;
+            }
+            tokens.push_back(Token(TK_STRING, message.substr(start, i - start)));
+            continue;
         } else if (curr == ':' && i + 1 < message.size()) {
             tokens.push_back(Token(curr, message.substr(i, 1)));
             i++;

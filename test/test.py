@@ -51,8 +51,8 @@ def recv(sock, timeout=2):
     except socket.timeout:
         return ''
 
-def connect_and_join(client):
-    send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK bruh\r\nUSER bruh b\r\n")
+def connect_and_join(client, message):
+    send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK " + message + "\r\nUSER "+ message + " "+ message + "\r\n")
     send_no_crlf(client, "JOIN #ledion\r\n")
 
 def message_format():
@@ -62,11 +62,12 @@ def message_format():
     client2 = connect_client()
     
 
-    connect_and_join(client)
+    connect_and_join(client, "ledion")
     time.sleep(1)
-    connect_and_join(client2)
+    connect_and_join(client2, "test")
     time.sleep(1)
-    send_no_crlf(client, "PRIVMSG #ledion :haha\r\n")
+    send_no_crlf(client, "KICK #ledion test :\r\n")
+    time.sleep(1)
     # send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK bruh\r\nUSER bruh b\r\n")
     # time.sleep(1)
     # send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK bruh\r\nUSER bruh b\r\n")

@@ -1,6 +1,7 @@
 #include "Channel.hpp"
 
-Channel::Channel(std::string name, int fd) : channel_name(name), mode(CH_NO_INVITE) {
+Channel::Channel(std::string name, int fd)
+    : channel_name(name), topic("Regular channel, nothing special!"), perm_invite(false), perm_topic(false) {
     users.push_back(fd);
     operators.push_back(fd);
 }

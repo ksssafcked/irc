@@ -19,12 +19,14 @@ enum CommandResultType {
     CMD_RESULT_REPLY_AND_BROADCAST, // reply to client who sent the command and broadcast message to other clients
     CMD_RESULT_BROADCAST,           // broadcast message to other clients
     CMD_CHANGE_MODE,
+    CMD_KICK,
 };
 
 struct CommandResult {
     int type;
     std::string reply;   // used to reply to client
     std::string message; // used to broadcast to clients
+    std::string extra;
 };
 
 class Commands {

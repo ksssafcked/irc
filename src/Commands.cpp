@@ -136,7 +136,7 @@ CommandResult Commands::mode_command_handler(Client* client, std::vector< Token 
     CommandResult result;
 
     (void)client;
-    if (args.size() != 4) {
+    if (args.size() < 3) {
         result.type = CMD_RESULT_NOT_FOUND;
     } else {
         result.type = CMD_CHANGE_MODE;
@@ -147,9 +147,18 @@ CommandResult Commands::mode_command_handler(Client* client, std::vector< Token 
 }
 
 CommandResult Commands::kick_command_handler(Client* client, std::vector< Token >& args) {
+    CommandResult result;
+
     (void)client;
-    (void)args;
-    return (CommandResult());
+    if (args.size() != 4) {
+        result.type = CMD_NO_RESULT;
+    } else {
+        result.type = CMD_KICK;
+        result.reply = args[1].data;
+        result.message = args[2].data;
+        result.extra = args[3].data;
+    }
+    return (result);
 }
 
 CommandResult Commands::invite_command_handler(Client* client, std::vector< Token >& args) {

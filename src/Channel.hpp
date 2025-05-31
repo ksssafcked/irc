@@ -5,8 +5,6 @@
 #include <iostream>
 
 enum ChannelMode {
-    CH_NO_INVITE,
-    CH_INVITE,
     CH_ADD_USER,
     CH_ADD_OPERATOR,
     CH_ADD_INVITE,
@@ -15,11 +13,13 @@ enum ChannelMode {
 struct Channel {
 
     std::string channel_name;
+    std::string topic;
     std::vector< int > users;
     std::vector< int > operators;
     std::vector< int > invites;
 
-    int mode;
+    bool perm_invite;
+    bool perm_topic;
 
     Channel(std::string name, int fd);
 

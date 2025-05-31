@@ -232,7 +232,13 @@ void Server::add_user_to_channel(std::string name, int fd, int mode) {
         if (mode == CH_ADD_USER) { // add user in users vector
             if (_channels[i].channel_name != name)
                 continue;
-            else if (_channels[i].mode == CH_NO_INVITE) {
+            else if (!_channels[i].perm_invite) {
+                for (size_t j = 0; j < _channels[i].invites.size(); j++) {
+                    if (_channels[i].invites[j] == fd) {
+                        _channels[i].invites.erase(_channels[i].invites.begin() + j);
+                        break;
+                    }
+                }
                 _channels[i].add_user(fd, mode);
                 return;
             } else {
@@ -251,11 +257,56 @@ void Server::add_user_to_channel(std::string name, int fd, int mode) {
     }
 }
 
+void Server::kick_user(Channel& channel, int fd, Client& client, std::string message) {
+    std::string first = ":" + client.nickname + "!" + client.username + "@" + client.hostname + " KICK "
+                        + channel.channel_name + " " + _client_map[fd].username + " " + message + "\r\n";
+    send_message(fd, first);
+    std::string reply = ":" + _client_map[fd].nickname + "!" + _client_map[fd].username + "@" + _client_map[fd].hostname
+                        + " PART " + channel.channel_name + " :Kicked by " + client.nickname + " " + message + "\r\n";
+    send_message(fd, reply);
+}
+
+void Server::kick_user(Channel& channel, int fd, std::string user, std::string message) {
+    std::string reply =
+        ":" + user + " PART " + channel.channel_name + " " + _client_map[fd].username + " " + message + "\r\n";
+    send_message(fd, reply);
+}
+
+void Server::check_kick(ClientIterator& client, CommandResult result) {
+    int fd;
+    if (!does_channel_exist(result.reply) || !does_user_exist(result.message, fd))
+        return;
+    if (fd == client->first)
+        return;
+    size_t i;
+    size_t j;
+    for (i = 0; i < _channels.size(); i++) {
+        if (_channels[i].channel_name == result.reply)
+            break;
+    }
+    for (j = 0; j < _channels[i].operators.size(); j++) {
+        if (_channels[i].operators[j] == client->first)
+            break;
+    }
+    if (j == _channels[i].operators.size())
+        return;
+    for (size_t k = 0; k < _channels[i].users.size(); k++) {
+        if (_channels[i].users[k] == fd)
+            kick_user(_channels[i], fd, client->second, result.extra);
+    }
+}
+
+int Server::getfd_byname(std::string name) {
+    for (ClientIterator it = _client_map.begin(); it != _client_map.end(); it++) {
+        if (it->second.username == name)
+            return (it->first);
+    }
+    return -1;
+}
+
 void Server::delete_channel(size_t i) {
     for (size_t j = 0; j < _channels[i].users.size(); j++) {
-        std::string mess = ":" + std::string(IRC_NAME) + " KICK " + _channels[i].channel_name + " "
-                           + _client_map[_channels[i].users[j]].username + " :hahah\r\n";
-        send_message(_channels[i].users[j], mess);
+        kick_user(_channels[i], _channels[i].users[j], std::string(IRC_NAME), ":All operators left the chat!");
     }
     _channels[i].users.clear();
     _channels[i].operators.clear();
@@ -330,13 +381,14 @@ bool Server::can_user_invite(ClientIterator& client, std::string channel) {
         if (_channels[i].channel_name == channel)
             break;
     }
-    if (_channels[i].mode == CH_INVITE) {
+    if (i == _channels.size())
+        return false;
+    if (_channels[i].perm_invite) {
         for (j = 0; j < _channels[i].operators.size(); j++) {
             if (_channels[i].operators[j] == client->first)
                 return true;
         }
     } else {
-
         for (j = 0; j < _channels[i].users.size(); j++) {
             if (_channels[i].users[j] == client->first) {
                 return true;
@@ -357,10 +409,10 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
         for (j = 0; j < _channels[i].operators.size(); j++) {
             if (_channels[i].operators[j] == client->first) {
                 if (result.message == "+") {
-                    _channels[i].mode = CH_INVITE;
+                    _channels[i].perm_invite = true;
                     return;
                 } else if (result.message == "-") {
-                    _channels[i].mode = CH_NO_INVITE;
+                    _channels[i].perm_invite = false;
                 }
             }
         }
@@ -431,6 +483,8 @@ bool Server::handle_client_input(ClientIterator& client) {
                 check_infos(client, result);
             } else if (result.type == CMD_CHANGE_MODE) {
                 change_mode(client, result);
+            } else if (result.type == CMD_KICK) {
+                check_kick(client, result);
             } else
                 send_to_all(client, result);
         }
