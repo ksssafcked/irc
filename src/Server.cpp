@@ -243,10 +243,12 @@ void Server::add_user_to_channel(CommandResult result, int fd, int mode) {
                 }
                 if (_channels[i].need_pass) {
                     // std::cout << ANSI_RED << "PASS: " << result.extra << " PASS2: " << _channels[i].password
-                    << ANSI_RESET << "\n";
+                    // << ANSI_RESET << "\n";
                     if (result.extra == _channels[i].password) {
                         _channels[i].add_user(fd, mode);
                     }
+                } else {
+                    _channels[i].add_user(fd, mode);
                 }
             } else {
                 for (size_t j = 0; j < _channels[i].invites.size(); j++) {
@@ -332,6 +334,12 @@ void Server::delete_user_from_channels(int fd) {
     }
 }
 
+std::string Server::error_message(std::string nickname, int error_code, std::string error_message) {
+    (void)error_code;
+    std::string reply = ":" + std::string(IRC_NAME) + " 469 * " + nickname + " " + error_message + "\r\n";
+    return reply;
+}
+
 void Server::check_infos(ClientIterator& client, CommandResult result) {
     std::cout << "Username : " << result.reply << std::endl;
     if (result.type == CMD_CHECK_PASS) { // if we check the password
@@ -353,7 +361,8 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
             for (ClientIterator clients = _client_map.begin(); clients != _client_map.end(); clients++) {
                 if (clients->first != client->first
                     && (clients->second.username == result.reply || clients->second.hostname == result.message)) {
-                    continue; // if the username is already used
+                    send_message(client->first, error_message(result.reply, 443, ":username is already in use"));
+                    return; // if the username is already used
                 }
             }
             client->second.username = result.reply;
@@ -416,6 +425,12 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
                 } else if (result.message == "-k") {
                     _channels[i].need_pass = false;
                     _channels[i].password.clear();
+                } else if (result.message == "+l") {
+                } else if (result.message == "-l") {
+                } else if (result.message == "+t") {
+                } else if (result.message == "-t") {
+                } else if (result.message == "+o") {
+                } else if (result.message == "-o") {
                 }
             }
         }

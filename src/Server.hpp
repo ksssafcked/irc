@@ -45,6 +45,7 @@ private:
     void drop_client(ClientIterator& client);
     int getfd_byname(std::string name);
     void send_message(int fd, std::string message);
+    std::string error_message(std::string nickname, int error_code, std::string error_message);
     void send_to_all(ClientIterator& client, CommandResult result);
     bool does_user_exist(std::string name, int& fd);
     bool does_channel_exist(std::string name);
