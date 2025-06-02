@@ -1,5 +1,4 @@
 #include "Server.hpp"
-#include "Common.hpp"
 #include "Commands.hpp"
 
 #include <unistd.h>
@@ -266,16 +265,22 @@ void Server::add_user_to_channel(CommandResult result, int fd, int mode) {
     }
 }
 
-void Server::kick_user(Channel& channel, int fd, Client& client, std::string message) {
+void Server::kick_user(size_t i, int fd, Client& client, std::string message) {
     std::string reply = ":" + client.nickname + "!" + client.username + "@" + client.hostname + " KICK "
-                        + channel.channel_name + " " + _client_map[fd].nickname + " " + message + "\r\n";
+                        + _channels[i].channel_name + " " + _client_map[fd].nickname + " " + message + "\r\n";
     send_message(fd, reply);
+    _channels[i].delete_from_all(fd);
+    if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0)
+        delete_channel(i);
 }
 
-void Server::kick_user(Channel& channel, int fd, std::string user, std::string message) {
+void Server::kick_user(size_t i, int fd, std::string user, std::string message) {
     std::string reply =
-        ":" + user + " KICK " + channel.channel_name + " " + _client_map[fd].nickname + " " + message + "\r\n";
+        ":" + user + " KICK " + _channels[i].channel_name + " " + _client_map[fd].nickname + " " + message + "\r\n";
     send_message(fd, reply);
+    _channels[i].delete_from_all(fd);
+    if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0)
+        delete_channel(i);
 }
 
 void Server::check_kick(ClientIterator& client, CommandResult result) {
@@ -298,7 +303,7 @@ void Server::check_kick(ClientIterator& client, CommandResult result) {
         return;
     for (size_t k = 0; k < _channels[i].users.size(); k++) {
         if (_channels[i].users[k] == fd) {
-            kick_user(_channels[i], fd, client->second, result.extra);
+            kick_user(i, fd, client->second, result.extra);
             delete_user_from_channels(fd);
         }
     }
@@ -314,7 +319,7 @@ int Server::getfd_byname(std::string name) {
 
 void Server::delete_channel(size_t i) {
     for (size_t j = 0; j < _channels[i].users.size(); j++) {
-        kick_user(_channels[i], _channels[i].users[j], std::string(IRC_NAME), ":All operators left the chat!");
+        kick_user(i, _channels[i].users[j], std::string(IRC_NAME), ":All operators left the chat!");
     }
     _channels[i].users.clear();
     _channels[i].operators.clear();
@@ -352,6 +357,7 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
         {
             for (ClientIterator clients = _client_map.begin(); clients != _client_map.end(); clients++) {
                 if (clients->first != client->first && clients->second.nickname == result.reply) {
+                    send_message(client->first, error_nickname_inuse(result.reply));
                     return; // if the nickname is already used
                 }
             }
@@ -361,7 +367,7 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
             for (ClientIterator clients = _client_map.begin(); clients != _client_map.end(); clients++) {
                 if (clients->first != client->first
                     && (clients->second.username == result.reply || clients->second.hostname == result.message)) {
-                    send_message(client->first, error_message(result.reply, 443, ":username is already in use"));
+                    send_message(client->first, error_username_inuse(result.reply));
                     return; // if the username is already used
                 }
             }
@@ -426,9 +432,13 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
                     _channels[i].need_pass = false;
                     _channels[i].password.clear();
                 } else if (result.message == "+l") {
+                    //_channels[i].limit_user = ""
                 } else if (result.message == "-l") {
+                    //_channels[i].limit_user = ""
                 } else if (result.message == "+t") {
+                    _channels[i].perm_topic = true;
                 } else if (result.message == "-t") {
+                    _channels[i].perm_topic = false;
                 } else if (result.message == "+o") {
                 } else if (result.message == "-o") {
                 }
@@ -461,6 +471,44 @@ void Server::handle_channel(ClientIterator& client, CommandResult result) {
                 add_user_to_channel(result, fd, CH_ADD_INVITE);
             }
         } else { // TODO : error channel doesn't exist}
+        }
+    }
+}
+
+
+void Server::topic_handle(ClientIterator& client, CommandResult result) {
+    if (result.message.empty()) {
+
+    } else {
+        if (!does_channel_exist(result.reply)) {
+            // send_message(client->first, error_nosuchchannel(client->second.nickname, result.reply));
+            return;
+        } else {
+            for (size_t i = 0; i < _channels.size(); i++) {
+                if (_channels[i].channel_name == result.reply) {
+                    if (!_channels[i].perm_topic) {
+                        for (size_t j = 0; j < _channels[i].users.size(); j++) {
+                            if (_channels[i].users[j] == client->first) {
+                                _channels[i].topic = result.message;
+                                std::string mess = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
+                                mess += result.reply + " :" + _channels[i].topic + "\r\n";
+                                std::cout << ANSI_RED << "topic: " << _channels[i].topic << "\n" << ANSI_RESET;
+                                send_message(client->first, mess);
+                            }
+                        }
+                    } else {
+                        for (size_t j = 0; j < _channels[i].operators.size(); j++) {
+                            if (_channels[i].operators[j] == client->first) {
+                                _channels[i].topic = result.message;
+                                std::string mess = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
+                                mess += result.reply + " :" + _channels[i].topic + "\r\n";
+                                std::cout << ANSI_RED << "topic: " << _channels[i].topic << "\n" << ANSI_RESET;
+                                send_message(client->first, mess);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -503,6 +551,8 @@ bool Server::handle_client_input(ClientIterator& client) {
                 change_mode(client, result);
             } else if (result.type == CMD_KICK) {
                 check_kick(client, result);
+            } else if (result.type == CMD_TOPIC) {
+                topic_handle(client, result);
             } else
                 send_to_all(client, result);
         }

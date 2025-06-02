@@ -182,5 +182,14 @@ CommandResult Commands::invite_command_handler(Client* client, std::vector< Toke
 CommandResult Commands::topic_command_handler(Client* client, std::vector< Token >& args) {
     (void)client;
     (void)args;
-    return (CommandResult());
+    CommandResult result;
+
+    if (args.size() < 2)
+        result.type = CMD_NO_RESULT;
+    else {
+        result.type = CMD_TOPIC;
+        result.reply = args[1].data;
+        result.message = args[3].data;
+    }
+    return (result);
 }

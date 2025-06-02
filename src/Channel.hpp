@@ -23,6 +23,9 @@ struct Channel {
     bool perm_invite;
     bool perm_topic;
     bool need_pass;
+    bool has_limit;
+
+    size_t limit_user;
 
     Channel(std::string name, int fd);
 

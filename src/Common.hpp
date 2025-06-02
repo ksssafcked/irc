@@ -1,10 +1,13 @@
 #pragma once
 
 #include <sstream>
+#include "Error.hpp"
 
 #ifndef DEBUG
     #define DEBUG 0
 #endif
+
+#define IRC_NAME "burekserv"
 
 #define ANSI_RED "\033[0;31m"
 #define ANSI_GREEN "\033[0;32m"

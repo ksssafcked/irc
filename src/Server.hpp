@@ -8,8 +8,8 @@
 #include "Client.hpp"
 #include "Commands.hpp"
 #include "Channel.hpp"
+#include "Common.hpp"
 
-#define IRC_NAME "burekserv"
 
 class Server {
 private:
@@ -51,13 +51,14 @@ private:
     bool does_channel_exist(std::string name);
     bool can_user_invite(ClientIterator& client, std::string channel);
     void handle_channel(ClientIterator& client, CommandResult result);
-    void kick_user(Channel& channel, int fd, Client& client, std::string message);
-    void kick_user(Channel& channel, int fd, std::string user, std::string message);
+    void kick_user(size_t i, int fd, Client& client, std::string message);
+    void kick_user(size_t i, int fd, std::string user, std::string message);
     void check_kick(ClientIterator& client, CommandResult result);
     void check_infos(ClientIterator& client, CommandResult result);
     void delete_channel(size_t i);
     void change_mode(ClientIterator& client, CommandResult result);
     bool all_info(Client& client);
+    void topic_handle(ClientIterator& client, CommandResult result);
     void add_user_to_channel(CommandResult result, int fd, int mode);
     void delete_user_from_channels(int fd);
     bool handle_client_input(ClientIterator& client);

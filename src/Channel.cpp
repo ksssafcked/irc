@@ -2,7 +2,7 @@
 
 Channel::Channel(std::string name, int fd)
     : channel_name(name), topic("Regular channel, nothing special!"), perm_invite(false), perm_topic(false),
-      need_pass(false) {
+      need_pass(false), has_limit(false), limit_user(100) {
     users.push_back(fd);
     operators.push_back(fd);
 }

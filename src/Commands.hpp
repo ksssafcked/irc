@@ -20,6 +20,7 @@ enum CommandResultType {
     CMD_RESULT_BROADCAST,           // broadcast message to other clients
     CMD_CHANGE_MODE,
     CMD_KICK,
+    CMD_TOPIC,
 };
 
 struct CommandResult {
