@@ -301,6 +301,7 @@ void Server::check_kick(ClientIterator& client, CommandResult result) {
         if (_channels[i].channel_name == result.reply) {
             if (!is_user_operator(client, _channels[i]))
                 return;
+            break;
         }
     }
     for (size_t k = 0; k < _channels[i].users.size(); k++) {
