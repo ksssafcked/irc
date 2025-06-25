@@ -241,8 +241,6 @@ void Server::add_user_to_channel(CommandResult result, int fd, int mode) {
                     }
                 }
                 if (_channels[i].need_pass) {
-                    // std::cout << ANSI_RED << "PASS: " << result.extra << " PASS2: " << _channels[i].password
-                    // << ANSI_RESET << "\n";
                     if (result.extra == _channels[i].password) {
                         _channels[i].add_user(fd, mode);
                     }
@@ -283,6 +281,15 @@ void Server::kick_user(size_t i, int fd, std::string user, std::string message) 
         delete_channel(i);
 }
 
+bool Server::is_user_operator(ClientIterator& client, Channel& channel) {
+    for (size_t i = 0; i < channel.operators.size(); i++) {
+        if (channel.operators[i] == client->first) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Server::check_kick(ClientIterator& client, CommandResult result) {
     int fd;
     if (!does_channel_exist(result.reply) || !does_user_exist(result.message, fd))
@@ -290,17 +297,12 @@ void Server::check_kick(ClientIterator& client, CommandResult result) {
     if (fd == client->first)
         return;
     size_t i;
-    size_t j;
     for (i = 0; i < _channels.size(); i++) {
-        if (_channels[i].channel_name == result.reply)
-            break;
+        if (_channels[i].channel_name == result.reply) {
+            if (!is_user_operator(client, _channels[i]))
+                return;
+        }
     }
-    for (j = 0; j < _channels[i].operators.size(); j++) {
-        if (_channels[i].operators[j] == client->first)
-            break;
-    }
-    if (j == _channels[i].operators.size())
-        return;
     for (size_t k = 0; k < _channels[i].users.size(); k++) {
         if (_channels[i].users[k] == fd) {
             kick_user(i, fd, client->second, result.extra);
@@ -410,38 +412,56 @@ bool Server::can_user_invite(ClientIterator& client, std::string channel) {
     return false;
 }
 
+void Server::add_operator(ClientIterator& client, Channel& channel, CommandResult result) {
+    int fd = getfd_byname(result.extra);
+
+    if (fd == -1 || fd == client->first)
+        return;
+    if (result.message == "+o") {
+        for (size_t i = 0; i < channel.operators.size(); i++) {
+            if (channel.operators[i] == fd)
+                return;
+            channel.operators.push_back(fd);
+        }
+    } else {
+        for (size_t i = 0; i < channel.operators.size(); i++) {
+            if (channel.operators[i] == fd)
+                channel.operators.erase(channel.operators.begin() + i);
+        }
+    }
+}
+
 void Server::change_mode(ClientIterator& client, CommandResult result) {
     if (does_channel_exist(result.reply)) {
         size_t i;
-        size_t j;
         for (i = 0; i < _channels.size(); i++) {
             if (_channels[i].channel_name == result.reply)
                 break;
         }
-        for (j = 0; j < _channels[i].operators.size(); j++) {
-            if (_channels[i].operators[j] == client->first) {
-                if (result.message == "+i") {
-                    _channels[i].perm_invite = true;
-                    return;
-                } else if (result.message == "-i") {
-                    _channels[i].perm_invite = false;
-                } else if (result.message == "+k" && !result.extra.empty()) {
-                    _channels[i].need_pass = true;
-                    _channels[i].password = result.extra;
-                } else if (result.message == "-k") {
-                    _channels[i].need_pass = false;
-                    _channels[i].password.clear();
-                } else if (result.message == "+l") {
-                    //_channels[i].limit_user = ""
-                } else if (result.message == "-l") {
-                    //_channels[i].limit_user = ""
-                } else if (result.message == "+t") {
-                    _channels[i].perm_topic = true;
-                } else if (result.message == "-t") {
-                    _channels[i].perm_topic = false;
-                } else if (result.message == "+o") {
-                } else if (result.message == "-o") {
-                }
+        if (is_user_operator(client, _channels[i])) {
+            if (result.message == "+i") {
+                _channels[i].perm_invite = true;
+                return;
+            } else if (result.message == "-i") {
+                _channels[i].perm_invite = false;
+            } else if (result.message == "+k" && !result.extra.empty()) {
+                _channels[i].need_pass = true;
+                _channels[i].password = result.extra;
+            } else if (result.message == "-k") {
+                _channels[i].need_pass = false;
+                _channels[i].password.clear();
+            } else if (result.message == "+l") {
+                _channels[i].limit_user = static_cast< size_t >(std::strtol(result.extra.c_str(), NULL, 10));
+                _channels[i].has_limit = true;
+            } else if (result.message == "-l") {
+                _channels[i].has_limit = false;
+                _channels[i].limit_user = 0;
+            } else if (result.message == "+t") {
+                _channels[i].perm_topic = true;
+            } else if (result.message == "-t") {
+                _channels[i].perm_topic = false;
+            } else if (result.message == "+o" || result.message == "-o") {
+                add_operator(client, _channels[i], result);
             }
         }
     }
@@ -475,7 +495,6 @@ void Server::handle_channel(ClientIterator& client, CommandResult result) {
     }
 }
 
-
 void Server::topic_handle(ClientIterator& client, CommandResult result) {
     if (result.message.empty()) {
 
@@ -490,7 +509,8 @@ void Server::topic_handle(ClientIterator& client, CommandResult result) {
                         for (size_t j = 0; j < _channels[i].users.size(); j++) {
                             if (_channels[i].users[j] == client->first) {
                                 _channels[i].topic = result.message;
-                                std::string mess = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
+                                std::string mess =
+                                    ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
                                 mess += result.reply + " :" + _channels[i].topic + "\r\n";
                                 std::cout << ANSI_RED << "topic: " << _channels[i].topic << "\n" << ANSI_RESET;
                                 send_message(client->first, mess);
@@ -500,7 +520,8 @@ void Server::topic_handle(ClientIterator& client, CommandResult result) {
                         for (size_t j = 0; j < _channels[i].operators.size(); j++) {
                             if (_channels[i].operators[j] == client->first) {
                                 _channels[i].topic = result.message;
-                                std::string mess = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
+                                std::string mess =
+                                    ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
                                 mess += result.reply + " :" + _channels[i].topic + "\r\n";
                                 std::cout << ANSI_RED << "topic: " << _channels[i].topic << "\n" << ANSI_RESET;
                                 send_message(client->first, mess);

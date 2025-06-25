@@ -4,12 +4,12 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <cstdlib>
 
 #include "Client.hpp"
 #include "Commands.hpp"
 #include "Channel.hpp"
 #include "Common.hpp"
-
 
 class Server {
 private:
@@ -54,11 +54,13 @@ private:
     void kick_user(size_t i, int fd, Client& client, std::string message);
     void kick_user(size_t i, int fd, std::string user, std::string message);
     void check_kick(ClientIterator& client, CommandResult result);
+    bool is_user_operator(ClientIterator& client, Channel& channel);
     void check_infos(ClientIterator& client, CommandResult result);
     void delete_channel(size_t i);
     void change_mode(ClientIterator& client, CommandResult result);
     bool all_info(Client& client);
     void topic_handle(ClientIterator& client, CommandResult result);
+    void add_operator(ClientIterator& client, Channel& channel, CommandResult result);
     void add_user_to_channel(CommandResult result, int fd, int mode);
     void delete_user_from_channels(int fd);
     bool handle_client_input(ClientIterator& client);
