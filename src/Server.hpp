@@ -59,6 +59,7 @@ private:
     void delete_channel(size_t i);
     void change_mode(ClientIterator& client, CommandResult result);
     bool all_info(Client& client);
+    void burek_to_all(std::string& channel);
     void topic_handle(ClientIterator& client, CommandResult result);
     void add_operator(ClientIterator& client, Channel& channel, CommandResult result);
     void add_user_to_channel(CommandResult result, int fd, int mode);

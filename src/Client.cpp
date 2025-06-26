@@ -126,7 +126,7 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
             size_t start = i;
 
             // keep going until we don't find a letter
-            while (i < message.size() && utils::is_alpha(message[i])) {
+            while (i < message.size() && !utils::is_space(message[i])) {
                 i++;
             }
 
@@ -160,7 +160,7 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
             size_t start = i;
 
             // keep going until we don't find a number
-            while (i < message.size() && utils::is_digit(message[i])) {
+            while (i < message.size() && !utils::is_space(message[i])) {
                 i++;
             }
 

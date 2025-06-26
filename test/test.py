@@ -66,7 +66,7 @@ def message_format():
     time.sleep(1)
     connect_and_join(client2, "test")
     time.sleep(1)
-    send_no_crlf(client, "KICK #ledion test :\r\n")
+    send_no_crlf(client, "PRIVMSG #ledion :burek\r\n")
     time.sleep(1)
     # send_no_crlf(client, "CAP LS 302\r\nPA\x01S\x07S 42\r\nNICK bruh\r\nUSER bruh b\r\n")
     # time.sleep(1)

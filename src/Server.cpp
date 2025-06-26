@@ -175,7 +175,20 @@ void Server::drop_client(ClientIterator& client) {
 
 void Server::send_message(int fd, std::string message) {
     send(fd, message.c_str(), message.length(), MSG_DONTWAIT);
-    std::cout << ANSI_RED << "[debug][server]: server sent: [" << message << "]\n" << ANSI_RESET;
+    std::cout << ANSI_RED << "[debug][server]: server sent to " << fd << ": [" << message << "]\n" << ANSI_RESET;
+}
+
+void Server::burek_to_all(std::string& channel) {
+    std::string mess;
+    mess = ":burek!burek@burek PRIVMSG " + channel + " :burek\r\n";
+    for (size_t i = 0; i < _channels.size(); i++) {
+            if (_channels[i].channel_name != channel)
+                continue;
+            std::vector< int > user_list = _channels[i].users;
+            for (size_t j = 0; j < user_list.size(); j++) {
+                send_message(user_list[j], mess);
+            }
+        }
 }
 
 void Server::send_to_all(ClientIterator& client, CommandResult result) {
@@ -196,6 +209,10 @@ void Server::send_to_all(ClientIterator& client, CommandResult result) {
                     send_message(user_list[j], mess);
                 }
             }
+        }
+        std::size_t burek = result.message.find("burek");
+        if (burek != std::string::npos) {
+            burek_to_all(result.reply);
         }
     }
 }
@@ -314,31 +331,32 @@ void Server::check_kick(ClientIterator& client, CommandResult result) {
 
 int Server::getfd_byname(std::string name) {
     for (ClientIterator it = _client_map.begin(); it != _client_map.end(); it++) {
-        if (it->second.username == name)
+        if (it->second.nickname == name)
             return (it->first);
     }
     return -1;
 }
 
 void Server::delete_channel(size_t i) {
-    for (size_t j = 0; j < _channels[i].users.size(); j++) {
-        kick_user(i, _channels[i].users[j], std::string(IRC_NAME), ":All operators left the chat!");
-    }
     _channels[i].users.clear();
     _channels[i].operators.clear();
     _channels[i].invites.clear();
     _channels.erase(_channels.begin() + i);
-    std::cout << ANSI_RED << "Channel delete number: " << (i + 1) << "\n" << ANSI_RESET;
 }
 
 void Server::delete_user_from_channels(int fd) {
     for (size_t i = 0; i < _channels.size();) {
+        
         _channels[i].delete_from_all(fd);
         if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0) {
-            delete_channel(i);
-            continue;
+            std::cout << ANSI_RED << "Channel delete number: " << (i + 1) << "\n" << ANSI_RESET;
+            for (size_t j = 0; j < _channels[i].users.size(); j++) {
+                kick_user(i, _channels[i].users[j], std::string(IRC_NAME), ":All operators left the chat!");
+    }
         }
-        i++;
+        else
+            i++;
+        std::cout << ANSI_RED << "Channel size: " << _channels.size() << "\n" << ANSI_RESET;
     }
 }
 
@@ -415,6 +433,7 @@ bool Server::can_user_invite(ClientIterator& client, std::string channel) {
 
 void Server::add_operator(ClientIterator& client, Channel& channel, CommandResult result) {
     int fd = getfd_byname(result.extra);
+    std::cout << ANSI_RED << result.extra << ":" << fd << ANSI_RESET << std::endl;
 
     if (fd == -1 || fd == client->first)
         return;
@@ -439,6 +458,7 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
             if (_channels[i].channel_name == result.reply)
                 break;
         }
+        std::cout << ANSI_RED << result.message << ANSI_RESET << std::endl;
         if (is_user_operator(client, _channels[i])) {
             if (result.message == "+i") {
                 _channels[i].perm_invite = true;
@@ -453,6 +473,7 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
                 _channels[i].password.clear();
             } else if (result.message == "+l") {
                 _channels[i].limit_user = static_cast< size_t >(std::strtol(result.extra.c_str(), NULL, 10));
+                std::cout << ANSI_RED << _channels[i].limit_user << ANSI_RESET << std::endl;
                 _channels[i].has_limit = true;
             } else if (result.message == "-l") {
                 _channels[i].has_limit = false;
