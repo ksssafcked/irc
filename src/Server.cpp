@@ -162,6 +162,7 @@ void Server::drop_client(ClientIterator& client) {
     std::cout << "[info][server]: dropping client (" << client->first << ")\n";
 
     for (size_t i = 1; i < _fds.size(); ++i) {
+        std::cout << "[info][server]: i:(" << i << ")\n";
         if (_fds[i].fd == client->first) {
             _fds.erase(this->_fds.begin() + i);
             break;
@@ -182,13 +183,13 @@ void Server::burek_to_all(std::string& channel) {
     std::string mess;
     mess = ":burek!burek@burek PRIVMSG " + channel + " :burek\r\n";
     for (size_t i = 0; i < _channels.size(); i++) {
-            if (_channels[i].channel_name != channel)
-                continue;
-            std::vector< int > user_list = _channels[i].users;
-            for (size_t j = 0; j < user_list.size(); j++) {
-                send_message(user_list[j], mess);
-            }
+        if (_channels[i].channel_name != channel)
+            continue;
+        std::vector< int > user_list = _channels[i].users;
+        for (size_t j = 0; j < user_list.size(); j++) {
+            send_message(user_list[j], mess);
         }
+    }
 }
 
 void Server::send_to_all(ClientIterator& client, CommandResult result) {
@@ -298,6 +299,16 @@ void Server::kick_user(size_t i, int fd, std::string user, std::string message) 
         delete_channel(i);
 }
 
+void Server::kick_all_users_from_channel(Channel& channel) {
+    std::string message = ":All operators left the chat!";
+    while (channel.users.size()) {
+        std::string reply = ":" + std::string(IRC_NAME) + " KICK " + channel.channel_name + " "
+                            + _client_map[channel.users[0]].nickname + " " + message + "\r\n";
+        send_message(channel.users[0], reply);
+        channel.delete_from_all(channel.users[0]);
+    }
+}
+
 bool Server::is_user_operator(ClientIterator& client, Channel& channel) {
     for (size_t i = 0; i < channel.operators.size(); i++) {
         if (channel.operators[i] == client->first) {
@@ -324,7 +335,6 @@ void Server::check_kick(ClientIterator& client, CommandResult result) {
     for (size_t k = 0; k < _channels[i].users.size(); k++) {
         if (_channels[i].users[k] == fd) {
             kick_user(i, fd, client->second, result.extra);
-            delete_user_from_channels(fd);
         }
     }
 }
@@ -346,15 +356,15 @@ void Server::delete_channel(size_t i) {
 
 void Server::delete_user_from_channels(int fd) {
     for (size_t i = 0; i < _channels.size();) {
-        
+
         _channels[i].delete_from_all(fd);
-        if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0) {
+        if (_channels[i].users.size() == 0)
+            delete_channel(i);
+        else if (_channels[i].operators.size() == 0) {
             std::cout << ANSI_RED << "Channel delete number: " << (i + 1) << "\n" << ANSI_RESET;
-            for (size_t j = 0; j < _channels[i].users.size(); j++) {
-                kick_user(i, _channels[i].users[j], std::string(IRC_NAME), ":All operators left the chat!");
-    }
-        }
-        else
+            kick_all_users_from_channel(_channels[i]);
+            delete_channel(i);
+        } else
             i++;
         std::cout << ANSI_RED << "Channel size: " << _channels.size() << "\n" << ANSI_RESET;
     }

@@ -51,6 +51,7 @@ private:
     bool does_channel_exist(std::string name);
     bool can_user_invite(ClientIterator& client, std::string channel);
     void handle_channel(ClientIterator& client, CommandResult result);
+    void kick_all_users_from_channel(Channel& channel);
     void kick_user(size_t i, int fd, Client& client, std::string message);
     void kick_user(size_t i, int fd, std::string user, std::string message);
     void check_kick(ClientIterator& client, CommandResult result);
