@@ -176,7 +176,7 @@ void Server::drop_client(ClientIterator& client) {
 
 void Server::send_message(int fd, std::string message) {
     send(fd, message.c_str(), message.length(), MSG_DONTWAIT);
-    std::cout << ANSI_RED << "[debug][server]: server sent to " << fd << ": [" << message << "]\n" << ANSI_RESET;
+    std::cout << "[debug][server]: server sent to " << fd << ": [" << message << "]\n";
 }
 
 void Server::burek_to_all(std::string& channel) {
@@ -379,11 +379,9 @@ std::string Server::error_message(std::string nickname, int error_code, std::str
 }
 
 void Server::check_infos(ClientIterator& client, CommandResult result) {
-    std::cout << "Username : " << result.reply << std::endl;
     if (result.type == CMD_CHECK_PASS) { // if we check the password
         if (result.reply == this->_password) {
-            client->second.state = S_USER;
-            std::cout << ANSI_RED << "Good password!\n" << ANSI_RESET;
+            client->second.state = S_USER; // TODO: send error to fd
         }
     } else {                        // if we check for username or nickname
         if (result.message.empty()) // check only nickname
@@ -395,7 +393,7 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
                 }
             }
             client->second.nickname = result.reply;
-            std::cout << ANSI_RED << "New nick !\n" << ANSI_RESET;
+            std::cout << "New nick !\n";
         } else { // check username and hostname
             for (ClientIterator clients = _client_map.begin(); clients != _client_map.end(); clients++) {
                 if (clients->first != client->first
@@ -406,7 +404,7 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
             }
             client->second.username = result.reply;
             client->second.hostname = result.message;
-            std::cout << ANSI_RED << "New username !\n" << ANSI_RESET;
+            std::cout << "New username !\n";
         }
         if (client->second.state != S_CONNECT && all_info(client->second)) {
             client->second.state++;
@@ -414,7 +412,7 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
                                   + " :Welcome to the IRC network, " + client->second.nickname + "!"
                                   + client->second.username + "@" + client->second.hostname + "\r\n";
             send_message(client->first, message);
-            std::cout << ANSI_RED << "All info !\n" << ANSI_RESET;
+            std::cout << "All info !\n";
         }
     }
 }
@@ -470,7 +468,6 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
             if (_channels[i].channel_name == result.reply)
                 break;
         }
-        std::cout << ANSI_RED << result.message << ANSI_RESET << std::endl;
         if (is_user_operator(client, _channels[i])) {
             if (result.message == "+i") {
                 _channels[i].perm_invite = true;
@@ -484,7 +481,6 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
                 _channels[i].password.clear();
             } else if (result.message == "+l") {
                 _channels[i].limit_user = static_cast< size_t >(std::strtol(result.extra.c_str(), NULL, 10));
-                std::cout << ANSI_RED << _channels[i].limit_user << ANSI_RESET << std::endl;
                 _channels[i].has_limit = true;
             } else if (result.message == "-l") {
                 _channels[i].has_limit = false;
@@ -508,18 +504,13 @@ void Server::handle_channel(ClientIterator& client, CommandResult result) {
             Channel c(result.reply, client->first);
             _channels.push_back(c);
         }
-        std::cout << ANSI_RED << "channels :" << _channels.size() << std::endl;
-        if (_channels.size() > 0)
-            std::cout << ANSI_RED << "users :" << _channels[0].users.size() << std::endl << ANSI_RESET;
     } else {
         int fd;
         std::string mess;
         if (does_channel_exist(result.reply)) {
             if (can_user_invite(client, result.reply) && does_user_exist(result.message, fd)) {
                 mess = ":" + client->second.username + "!" + _client_map[fd].username + "@" + _client_map[fd].hostname;
-                //+ "!" + _client_map[fd].username + "@" + _client_map[fd].hostname
                 mess += " INVITE " + result.message + " " + result.reply + "\r\n";
-                // mess = ":server JOIN " + result.message + "\r\n";
                 send_message(fd, mess);
                 add_user_to_channel(result, fd, CH_ADD_INVITE);
             }
@@ -545,7 +536,6 @@ void Server::topic_handle(ClientIterator& client, CommandResult result) {
                                 std::string mess =
                                     ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
                                 mess += result.reply + " :" + _channels[i].topic + "\r\n";
-                                std::cout << ANSI_RED << "topic: " << _channels[i].topic << "\n" << ANSI_RESET;
                                 send_message(client->first, mess);
                             }
                         }
@@ -556,7 +546,6 @@ void Server::topic_handle(ClientIterator& client, CommandResult result) {
                                 std::string mess =
                                     ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
                                 mess += result.reply + " :" + _channels[i].topic + "\r\n";
-                                std::cout << ANSI_RED << "topic: " << _channels[i].topic << "\n" << ANSI_RESET;
                                 send_message(client->first, mess);
                             }
                         }
@@ -590,7 +579,7 @@ bool Server::handle_client_input(ClientIterator& client) {
 
     CommandResult result;
     while (!client->second.input.empty()) {
-        std::cout << ANSI_PINK << "[debug][server]: input from client (" << client->second.input << ")\n" << ANSI_RESET;
+        std::cout << "[debug][server]: input from client :" << client->first << "(" << client->second.input << ")\n";
         if (client->second.process_input(result)) {
             if (result.type == CMD_RESULT_REPLY)
                 send_message(client->first, result.reply);

@@ -5,15 +5,11 @@
 #include <iostream>
 
 bool Client::process_input(CommandResult& result) {
-    std::cout << ANSI_CYAN << "[debug][server]: parsing client input: [" << this->input << "]\n" << ANSI_RESET;
-
     // handle multi-line messages (IRC v3)
     std::string message;
     if (!split_input_buffer(message)) {
         return false;
     }
-
-    std::cout << ANSI_CYAN << "[debug][server]: processing message: [" << message << "]\n" << ANSI_RESET;
 
     std::vector< Token > tokens;
     if (!tokenize_message(message, tokens)) {
@@ -32,7 +28,6 @@ bool Client::process_input(CommandResult& result) {
 
     result = Commands::execute(tokens.begin()->data, this, tokens);
     if (result.type > CMD_NO_RESULT) {
-        std::cout << ANSI_CYAN << "[debug][client]: command: '" << tokens.begin()->data << "' found\n" << ANSI_RESET;
         return true;
     } else {
         if (result.type == CMD_RESULT_NOT_FOUND) {
@@ -46,11 +41,6 @@ bool Client::process_input(CommandResult& result) {
         }
         return false;
     }
-    // if (result.type == CMD_RESULT_NOT_FOUND) {
-    //     std::cout << "[debug][client]: command '" << tokens.begin()->data << "' not found\n";
-    // } else if (result.type == CMD_RESULT_FAILED) {
-    //     std::cout << "[debug][client]: command '" << tokens.begin()->data << "' failed\n";
-    // }
 
     // TODO: think of way to use result
 }
@@ -89,8 +79,6 @@ bool Client::split_input_buffer(std::string& message) {
                 message = input.substr(i, j - i);
                 skip_delimiter(input, j);
                 input = input.substr(j, input.size() - j);
-                // std::cout << ANSI_PINK << "input [" << input << "]\n" << ANSI_RESET;
-                std::cout << ANSI_PINK << "split [" << message << "]\n" << ANSI_RESET;
                 return true;
             }
 

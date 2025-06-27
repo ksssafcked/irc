@@ -21,7 +21,6 @@ void Commands::register_commands() {
 CommandResult Commands::execute(const std::string& name, Client* client, std::vector< Token >& args) {
     std::map< std::string, CommandHandler >::iterator itr = _commands.find(name);
     if (itr != _commands.end()) {
-        std::cout << "executing " << name << "!\n";
         return itr->second(client, args);
     }
 
@@ -112,25 +111,18 @@ CommandResult Commands::join_command_handler(Client* client, std::vector< Token 
     result.message = client->username;
     if (args.size() == 3)
         result.extra = args[2].data;
-    std::cout << "[debug][client]: creating channel : [" << args[1].data << "]\n";
-
     return result;
 }
 
 CommandResult Commands::quit_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
-
-    if (args.size() != 3) {
+    (void)client;
+    if (args.size() != 3)
         result.type = CMD_NO_RESULT;
-        return result;
+    else {
+        result.type = CMD_QUIT;
+        result.reply = args[2].data;
     }
-    result.type = CMD_QUIT;
-    result.reply = args[2].data;
-    if (client->username.empty())
-        std::cout << "[debug][client]: user leaved: [NO_USERNAME]\n";
-    else
-        std::cout << "[debug][client]: user leaved: [" << client->username << "]\n";
-
     return result;
 }
 
