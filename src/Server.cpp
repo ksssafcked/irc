@@ -286,8 +286,10 @@ void Server::kick_user(size_t i, int fd, Client& client, std::string message) {
                         + _channels[i].channel_name + " " + _client_map[fd].nickname + " " + message + "\r\n";
     send_message(fd, reply);
     _channels[i].delete_from_all(fd);
-    if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0)
+    if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0) {
+        kick_all_users_from_channel(_channels[i]);
         delete_channel(i);
+    }
 }
 
 void Server::kick_user(size_t i, int fd, std::string user, std::string message) {
@@ -295,8 +297,10 @@ void Server::kick_user(size_t i, int fd, std::string user, std::string message) 
         ":" + user + " KICK " + _channels[i].channel_name + " " + _client_map[fd].nickname + " " + message + "\r\n";
     send_message(fd, reply);
     _channels[i].delete_from_all(fd);
-    if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0)
+    if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0) {
+        kick_all_users_from_channel(_channels[i]);
         delete_channel(i);
+    }
 }
 
 void Server::kick_all_users_from_channel(Channel& channel) {
@@ -358,9 +362,7 @@ void Server::delete_user_from_channels(int fd) {
     for (size_t i = 0; i < _channels.size();) {
 
         _channels[i].delete_from_all(fd);
-        if (_channels[i].users.size() == 0)
-            delete_channel(i);
-        else if (_channels[i].operators.size() == 0) {
+        if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0) {
             std::cout << ANSI_RED << "Channel delete number: " << (i + 1) << "\n" << ANSI_RESET;
             kick_all_users_from_channel(_channels[i]);
             delete_channel(i);
@@ -406,7 +408,7 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
             client->second.hostname = result.message;
             std::cout << ANSI_RED << "New username !\n" << ANSI_RESET;
         }
-        if (all_info(client->second)) {
+        if (client->second.state != S_CONNECT && all_info(client->second)) {
             client->second.state++;
             std::string message = ":" + std::string(IRC_NAME) + " 001 " + client->second.nickname
                                   + " :Welcome to the IRC network, " + client->second.nickname + "!"
@@ -472,7 +474,6 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
         if (is_user_operator(client, _channels[i])) {
             if (result.message == "+i") {
                 _channels[i].perm_invite = true;
-                return;
             } else if (result.message == "-i") {
                 _channels[i].perm_invite = false;
             } else if (result.message == "+k" && !result.extra.empty()) {

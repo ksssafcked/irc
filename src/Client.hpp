@@ -35,7 +35,6 @@ struct Client {
     std::string password;
     std::string hostname;
 
-
     Client() : state(S_PASS) {}
 
     bool process_input(CommandResult& result);

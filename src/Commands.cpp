@@ -52,7 +52,7 @@ CommandResult Commands::cap_command_handler(Client* client, std::vector< Token >
 CommandResult Commands::nick_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
 
-    if (args.size() != 2 || client->state != S_USER)
+    if (args.size() != 2 || client->state < S_USER)
         result.type = CMD_NO_RESULT;
     else {
         result.type = CMD_CHECK_USER;
