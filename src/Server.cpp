@@ -8,6 +8,8 @@
 #include <iostream>
 #include <csignal>
 
+#define DEBUG_VIEW true
+
 bool Server::running = false;
 
 Server::Server(unsigned short port, const std::string& password)
@@ -21,6 +23,10 @@ Server::Server(unsigned short port, const std::string& password)
     }
 
     Commands::register_commands();
+
+#ifdef DEBUG_VIEW
+    this->add_fd_to_poll(STDIN_FILENO, POLLIN);
+#endif
 
     std::cout << "[info][server]: listening on port " << port << "\n" << ANSI_RESET;
 
@@ -51,8 +57,10 @@ void Server::run() {
         if (activity < 0) {
             std::cerr << ANSI_RED << "[error][server]: failed to poll!\n" << ANSI_RESET;
             return;
-        } else if (activity == 0)
+        } else if (activity == 0) {
             continue;
+        }
+
         // accept any incoming connections
         if (_fds[0].revents & POLLIN) {
             this->accept_client();
@@ -62,6 +70,95 @@ void Server::run() {
         for (size_t i = 1; i < _fds.size(); i++) {
             ClientIterator client = _client_map.find(_fds[i].fd);
             if (client == _client_map.end()) {
+#ifdef DEBUG_VIEW
+                if (_fds[i].fd == STDIN_FILENO && _fds[i].revents & POLLIN) {
+                    char buffer[32];
+                    ssize_t bytes_read = read(STDIN_FILENO, buffer, sizeof(buffer));
+
+                    if (bytes_read <= 0) {
+                        continue;
+                    }
+
+                    std::string input = std::string(buffer, bytes_read);
+                    if (input == "debug\n") {
+                        std::cout << ANSI_CYAN << "-------- debug view --------\n" << ANSI_RESET;
+
+                        std::cout << "clients:\n";
+
+                        for (size_t i = 1; i < _fds.size(); i++) {
+                            ClientIterator client = _client_map.find(_fds[i].fd);
+                            if (client == _client_map.end()) {
+                                continue;
+                            }
+
+                            std::cout << "\t" << i << ": username(" << client->second.username << "), nick("
+                                      << client->second.nickname << "), hostname(" << client->second.hostname
+                                      << "), fd(" << client->first << ")\n";
+                        }
+
+                        std::cout << "channels:\n";
+                        for (size_t i = 0; i < _channels.size(); i++) {
+                            Channel& ch = _channels[i];
+
+                            std::cout << "\t" << i << ": " << ch.channel_name << "\n";
+                            std::cout << "\t\ttopic: " << ch.topic << "\n";
+
+                            std::cout << "\t\tneeds pass: " << ch.need_pass << "\n";
+                            std::cout << "\t\tpassword: ";
+                            if (!ch.password.empty()) {
+                                std::cout << "\"" << ch.password << "\"\n";
+                            } else {
+                                std::cout << "\"\"\n";
+                            }
+
+                            std::cout << "\t\tlimit: ";
+                            if (ch.has_limit) {
+                                std::cout << ch.limit_user << "\n";
+                            } else {
+                                std::cout << -1 << "\n";
+                            }
+
+                            std::cout << "\t\tperm invite: " << ch.perm_invite << "\n";
+                            std::cout << "\t\tperm topic: " << ch.perm_topic << "\n";
+
+                            std::cout << "\t\tusers:\n";
+                            for (size_t j = 0; j < ch.users.size(); j++) {
+                                ClientIterator user = _client_map.find(ch.users[j]);
+                                if (user == _client_map.end()) {
+                                    continue;
+                                }
+
+                                bool is_operator = false;
+                                for (size_t k = 0; k < ch.operators.size(); k++) {
+                                    ClientIterator op = _client_map.find(ch.users[k]);
+                                    if (user == _client_map.end()) {
+                                        continue;
+                                    }
+
+                                    if (user->first == op->first) {
+                                        is_operator = true;
+                                        break;
+                                    }
+                                }
+
+                                std::cout << "\t\t\t" << user->second.username << ": is_op(" << is_operator << ")\n";
+                            }
+
+                            std::cout << "\t\tinvites:\n";
+                            for (size_t j = 0; j < ch.invites.size(); j++) {
+                                ClientIterator user = _client_map.find(ch.users[j]);
+                                if (user == _client_map.end()) {
+                                    continue;
+                                }
+
+                                std::cout << "\t\t\tinvited " << user->second.username << "\n";
+                            }
+                        }
+
+                        std::cout << ANSI_CYAN << "----------------------------\n" << ANSI_RESET;
+                    }
+                }
+#endif
                 // NOTE: should never happen
                 continue;
             }
@@ -70,12 +167,6 @@ void Server::run() {
                 if (!handle_client_input(client))
                     break;
             }
-            // if (client->second.state == S_CONNECT) {
-            //
-
-            //     client->second.connected = true;
-            // }
-            // TODO: POLLOUT
         }
     }
 }
@@ -103,6 +194,7 @@ bool Server::setup_socket() {
         return false;
     }
 
+    // TODO: increase backlog?
     if (listen(_socket, 10) == -1) {
         std::cerr << ANSI_RED << "[error][server]: listen() failed!\n" << ANSI_RESET;
         return false;
@@ -162,7 +254,6 @@ void Server::drop_client(ClientIterator& client) {
     std::cout << "[info][server]: dropping client (" << client->first << ")\n";
 
     for (size_t i = 1; i < _fds.size(); ++i) {
-        std::cout << "[info][server]: i:(" << i << ")\n";
         if (_fds[i].fd == client->first) {
             _fds.erase(this->_fds.begin() + i);
             break;
@@ -579,7 +670,10 @@ bool Server::handle_client_input(ClientIterator& client) {
 
     CommandResult result;
     while (!client->second.input.empty()) {
-        std::cout << "[debug][server]: input from client :" << client->first << "(" << client->second.input << ")\n";
+        std::cout << ANSI_CYAN << "[debug][server]: input from client (" << client->first << ") ["
+                  << client->second.input << "]\n"
+                  << ANSI_RESET;
+
         if (client->second.process_input(result)) {
             if (result.type == CMD_RESULT_REPLY)
                 send_message(client->first, result.reply);
