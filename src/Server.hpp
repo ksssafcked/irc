@@ -45,15 +45,17 @@ private:
     void drop_client(ClientIterator& client);
     int getfd_byname(std::string name);
     void send_message(int fd, std::string message);
+    void send_join_message(Channel& channel, int fd);
     std::string error_message(std::string nickname, int error_code, std::string error_message);
     void send_to_all(ClientIterator& client, CommandResult result);
     bool does_user_exist(std::string name, int& fd);
-    bool does_channel_exist(std::string name);
+    bool does_channel_exist(std::string name, size_t& index);
     bool can_user_invite(ClientIterator& client, std::string channel);
     void handle_channel(ClientIterator& client, CommandResult result);
     void kick_all_users_from_channel(Channel& channel);
     void kick_user(size_t i, int fd, Client& client, std::string message);
     void kick_user(size_t i, int fd, std::string user, std::string message);
+    void leave_channel(ClientIterator& client, CommandResult result);
     void check_kick(ClientIterator& client, CommandResult result);
     bool is_user_operator(ClientIterator& client, Channel& channel);
     void check_infos(ClientIterator& client, CommandResult result);
@@ -63,7 +65,7 @@ private:
     void burek_to_all(std::string& channel);
     void topic_handle(ClientIterator& client, CommandResult result);
     void add_operator(ClientIterator& client, Channel& channel, CommandResult result);
-    void add_user_to_channel(CommandResult result, int fd, int mode);
+    bool add_user_to_channel(CommandResult result, int fd, int mode);
     void delete_user_from_channels(int fd);
     bool handle_client_input(ClientIterator& client);
 };

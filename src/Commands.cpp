@@ -16,6 +16,7 @@ void Commands::register_commands() {
     _commands["INVITE"] = Commands::invite_command_handler;
     _commands["MODE"] = Commands::mode_command_handler;
     _commands["TOPIC"] = Commands::topic_command_handler;
+    _commands["PART"] = Commands::leave_command_handler;
 }
 
 CommandResult Commands::execute(const std::string& name, Client* client, std::vector< Token >& args) {
@@ -181,7 +182,21 @@ CommandResult Commands::topic_command_handler(Client* client, std::vector< Token
     else {
         result.type = CMD_TOPIC;
         result.reply = args[1].data;
-        result.message = args[3].data;
+        if (args.size() > 3)
+            result.message = args[3].data;
     }
     return (result);
+}
+
+CommandResult Commands::leave_command_handler(Client* client, std::vector< Token >& args) {
+    CommandResult result;
+
+    (void)client;
+    if (args.size() < 2)
+        result.type = CMD_NO_RESULT;
+    else {
+        result.type = CMD_LEAVE;
+        result.reply = args[1].data;
+    }
+    return result;
 }

@@ -13,10 +13,21 @@ void Channel::add_user(int fd, int mode) {
             if (users.size() == limit_user)
                 return;
         users.push_back(fd);
-    } else if (mode == CH_ADD_OPERATOR)
+    }
+
+    else if (mode == CH_ADD_OPERATOR) {
+        for (size_t i = 0; i < operators.size(); i++) {
+            if (operators[i] == fd)
+                return;
+        }
         operators.push_back(fd);
-    else
+    } else {
+        for (size_t i = 0; i < invites.size(); i++) {
+            if (invites[i] == fd)
+                return;
+        }
         invites.push_back(fd);
+    }
 }
 
 void Channel::delete_user(int fd) {

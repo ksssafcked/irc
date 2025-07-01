@@ -11,6 +11,7 @@ enum CommandResultType {
     CMD_RESULT_FAILED,
     CMD_NO_RESULT, // no reply needed
     CMD_QUIT,
+    CMD_LEAVE,
     CMD_CHANNEL, // create or join channel
     CMD_INVITE,
     CMD_CHECK_USER, // server needs to check password
@@ -51,4 +52,5 @@ private:
     static CommandResult mode_command_handler(Client* client, std::vector< Token >& args);
     static CommandResult topic_command_handler(Client* client, std::vector< Token >& args);
     static CommandResult invite_command_handler(Client* client, std::vector< Token >& args);
+    static CommandResult leave_command_handler(Client* client, std::vector< Token >& args);
 };
