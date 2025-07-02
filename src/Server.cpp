@@ -8,7 +8,6 @@
 #include <iostream>
 #include <csignal>
 #include <string>
-#include <fstream>
 
 bool Server::running = false;
 
@@ -409,11 +408,17 @@ bool Server::is_user_operator(ClientIterator& client, Channel& channel) {
 void Server::check_kick(ClientIterator& client, CommandResult result) {
     int fd;
     size_t i;
-    if (!does_channel_exist(result.reply, i) || !does_user_exist(result.message, fd))
+    if (!does_channel_exist(result.reply, i))
         return;
-    if (fd == client->first || !is_user_operator(client, _channels[i]))
+    else if (!does_user_exist(result.message, fd)) {
+        send_message(client->first, error_nosuchnick(client->second.nickname, result.message));
+    } else if (fd == client->first) {
         return;
-    if (_channels[i].users.count(fd))
+    } else if (!_channels[i].users.count(client->first)) {
+        send_message(client->first, error_notonchannel(client->second.nickname, _channels[i].channel_name));
+    } else if (!is_user_operator(client, _channels[i])) {
+        send_message(client->first, error_chanoprivsneeded(client->second.nickname, _channels[i].channel_name));
+    } else if (_channels[i].users.count(fd))
         kick_user(i, fd, client->second, result.extra);
 }
 
@@ -456,6 +461,7 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
     if (result.type == CMD_CHECK_PASS) { // if we check the password
         if (result.reply == this->_password) {
             client->second.state = S_USER; // TODO: send error to fd
+        } else {
         }
     } else {                        // if we check for username or nickname
         if (result.message.empty()) // check only nickname
@@ -549,7 +555,11 @@ void Server::change_mode(ClientIterator& client, CommandResult result) {
             } else if (result.message == "+o" || result.message == "-o") {
                 add_operator(client, _channels[i], result);
             }
+        } else {
+            send_message(client->first, error_chanoprivsneeded(client->second.nickname, _channels[i].channel_name));
         }
+    } else {
+        send_message(client->first, error_nosuchchannel(client->second.nickname, result.reply));
     }
 }
 
@@ -571,13 +581,23 @@ void Server::handle_channel(ClientIterator& client, CommandResult result) {
         (void)index;
         std::string mess;
         if (does_channel_exist(result.reply, index)) {
-            if (can_user_invite(client, result.reply) && does_user_exist(result.message, fd)) {
-                mess = ":" + client->second.username + "!" + _client_map[fd].username + "@" + _client_map[fd].hostname;
-                mess += " INVITE " + result.message + " " + result.reply + "\r\n";
-                send_message(fd, mess);
-                add_user_to_channel(result, fd, CH_ADD_INVITE);
+            if (can_user_invite(client, result.reply)) { // TODO: check if user is not in channel or if user is not ope
+                                                         // and change error message depending the result
+                if (does_user_exist(result.message, fd)) {
+                    mess =
+                        ":" + client->second.username + "!" + _client_map[fd].username + "@" + _client_map[fd].hostname;
+                    mess += " INVITE " + result.message + " " + result.reply + "\r\n";
+                    send_message(fd, mess);
+                    add_user_to_channel(result, fd, CH_ADD_INVITE);
+                } else { // target user doesnt exist
+                    send_message(client->first, error_nosuchnick(client->second.nickname, result.message));
+                }
+            } else { // user is not operator
+                send_message(client->first,
+                             error_chanoprivsneeded(client->second.nickname, _channels[index].channel_name));
             }
         } else { // TODO : error channel doesn't exist}
+            send_message(client->first, error_nosuchchannel(client->second.nickname, result.reply));
         }
     }
 }
@@ -590,20 +610,23 @@ void Server::topic_handle(ClientIterator& client, CommandResult result) {
         if (!does_channel_exist(result.reply, i)) {
             // send_message(client->first, error_nosuchchannel(client->second.nickname, result.reply));
             return;
+        } else if (_channels[i].users.count(client->first)) {
+            send_message(client->first, error_notonchannel(client->second.nickname, _channels[i].channel_name));
         } else {
             if (!_channels[i].perm_topic) {
-                if (_channels[i].users.count(client->first)) {
-                    _channels[i].topic = result.message;
-                    std::string mess = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
-                    mess += result.reply + " :" + _channels[i].topic + "\r\n";
-                    send_message(client->first, mess);
-                }
+                _channels[i].topic = result.message;
+                std::string mess = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
+                mess += result.reply + " :" + _channels[i].topic + "\r\n";
+                send_message(client->first, mess);
             } else {
                 if (_channels[i].operators.count(client->first)) {
                     _channels[i].topic = result.message;
                     std::string mess = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
                     mess += result.reply + " :" + _channels[i].topic + "\r\n";
                     send_message(client->first, mess);
+                } else {
+                    send_message(client->first,
+                                 error_chanoprivsneeded(client->second.nickname, _channels[i].channel_name));
                 }
             }
         }
@@ -633,7 +656,6 @@ void Server::leave_channel(ClientIterator& client, CommandResult result) {
 }
 
 bool Server::handle_client_input(ClientIterator& client) {
-    // std::cout << "[info][server]: handling input from client (" << client->first << ")\n";
 
     char buffer[512];
     ssize_t bytes_read = recv(client->first, buffer, sizeof(buffer), MSG_DONTWAIT);
@@ -643,7 +665,6 @@ bool Server::handle_client_input(ClientIterator& client) {
         return false;
     }
 
-    // build up the current message (https://modern.ircdocs.horse/#message-format)
     client->second.input.append(buffer, bytes_read);
 
     for (std::string::iterator it = client->second.input.begin(); it != client->second.input.end(); it++) {
