@@ -530,6 +530,9 @@ void Server::add_operator(ClientIterator& client, Channel& channel, CommandResul
 
 void Server::change_mode(ClientIterator& client, CommandResult result) {
     size_t i;
+    if (!utils::is_channel(result.reply)) {
+        return;
+    }
     if (does_channel_exist(result.reply, i)) {
         if (is_user_operator(client, _channels[i])) {
             if (result.message == "+i") {
@@ -598,6 +601,31 @@ void Server::handle_channel(ClientIterator& client, CommandResult result) {
             }
         } else { // TODO : error channel doesn't exist}
             send_message(client->first, error_nosuchchannel(client->second.nickname, result.reply));
+        }
+    }
+}
+
+void Server::handle_nick(ClientIterator& client, CommandResult result) {
+    for (ClientIterator clients = _client_map.begin(); clients != _client_map.end(); clients++) {
+        if (clients->first != client->first && clients->second.nickname == result.reply) {
+            send_message(client->first, error_nickname_inuse(result.reply));
+            return; // if the nickname is already used
+        }
+    }
+    std::string old_nick = client->second.nickname;
+    client->second.nickname = result.reply;
+    std::string nick_notif = ":" + old_nick + "!" + client->second.username + "@" + client->second.hostname
+                             + " NICK :" + client->second.nickname + "\r\n";
+    send_message(client->first, nick_notif);
+    for (size_t i = 0; i < _channels.size(); i++) {
+        if (_channels[i].users.count(client->first)) {
+            const std::set< int >& user_list = _channels[i].users;
+            std::set< int >::const_iterator it;
+            for (it = user_list.begin(); it != user_list.end(); it++) {
+                if (client->first != *it) {
+                    send_message(*it, nick_notif);
+                }
+            }
         }
     }
 }
@@ -695,6 +723,8 @@ bool Server::handle_client_input(ClientIterator& client) {
                 check_kick(client, result);
             } else if (result.type == CMD_TOPIC) {
                 topic_handle(client, result);
+            } else if (result.type == CMD_CHANGE_NICK) {
+                handle_nick(client, result);
             } else
                 send_to_all(client, result);
         }

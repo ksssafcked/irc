@@ -51,10 +51,14 @@ CommandResult Commands::cap_command_handler(Client* client, std::vector< Token >
 
 CommandResult Commands::nick_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
-
-    if (args.size() != 2 || client->state < S_USER)
+    if (args.size() != 2) {
+    }
+    if (client->state < S_USER)
         result.type = CMD_NO_RESULT;
-    else {
+    else if (client->state == S_CONNECT) {
+        result.type = CMD_CHANGE_NICK;
+        result.reply = args[1].data;
+    } else {
         result.type = CMD_CHECK_USER;
         result.reply = args[1].data;
     }
@@ -146,7 +150,8 @@ CommandResult Commands::mode_command_handler(Client* client, std::vector< Token 
         std::string nick = !client->nickname.empty() ? client->nickname : "*";
         result.reply = error_notregistered(nick);
     } else if (args.size() < 3 || args.size() > 4) {
-        result.type = CMD_RESULT_NOT_FOUND;
+        result.type = CMD_RESULT_REPLY;
+        result.reply = error_needmoreparams(client->nickname, "MODE");
     } else {
         result.type = CMD_CHANGE_MODE;
         result.reply = args[1].data;
