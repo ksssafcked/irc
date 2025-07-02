@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <set>
 #include <string>
 #include <iostream>
 
@@ -16,9 +16,9 @@ struct Channel {
     std::string topic;
     std::string password;
 
-    std::vector< int > users;
-    std::vector< int > operators;
-    std::vector< int > invites;
+    std::set< int > users;
+    std::set< int > operators;
+    std::set< int > invites;
 
     bool perm_invite;
     bool perm_topic;

@@ -45,6 +45,7 @@ bool Client::process_input(CommandResult& result) {
     // TODO: think of way to use result
 }
 
+/*
 void Client::skip_delimiter(std::string message, size_t& i) {
     while (i < message.size()) {
         if (message[i] == '\r')
@@ -89,6 +90,17 @@ bool Client::split_input_buffer(std::string& message) {
     }
 
     return true;
+}*/
+
+bool Client::split_input_buffer(std::string& message) {
+    size_t pos = input.find("\r\n");
+
+    if (pos == std::string::npos)
+        return false;
+
+    message = input.substr(0, pos);
+    input.erase(0, pos + 2);
+    return true;
 }
 
 Token Client::add_full_message(const std::string& message, size_t& i) {
@@ -102,7 +114,7 @@ Token Client::add_full_message(const std::string& message, size_t& i) {
     return t;
 }
 
-bool Client::tokenize_message(const std::string& message, std::vector< Token >& tokens) {
+/*bool Client::tokenize_message(const std::string& message, std::vector< Token >& tokens) {
 
     size_t i = 0;
     while (i < message.size()) {
@@ -175,4 +187,55 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
         i++;
     }
     return true;
+}*/
+
+bool Client::tokenize_message(const std::string& message, std::vector< Token >& tokens) {
+    if (message.empty()) {
+        return false;
+    }
+
+    tokens.clear();
+    std::string current_token;
+    std::string::const_iterator it = message.begin();
+
+    if (*it == ':') {
+        it++;
+        while (it != message.end() && *it != ' ') {
+            current_token += *it;
+            it++;
+        }
+        tokens.push_back(Token(TK_WORD, current_token));
+        current_token.clear();
+
+        while (it != message.end() && *it == ' ') {
+            it++;
+        }
+    }
+
+    while (it != message.end()) {
+        if (*it == ':') {
+            it++;
+            tokens.push_back(Token(TK_STRING, std::string(it, message.end())));
+            return true;
+        }
+
+        if (*it == ' ') {
+            if (!current_token.empty()) {
+                tokens.push_back(Token(TK_WORD, current_token));
+                current_token.clear();
+            }
+            while (it != message.end() && *it == ' ') {
+                it++;
+            }
+        } else {
+            current_token += *it;
+            it++;
+        }
+    }
+
+    if (!current_token.empty()) {
+        tokens.push_back(Token(TK_WORD, current_token));
+    }
+
+    return !tokens.empty();
 }

@@ -87,16 +87,13 @@ CommandResult Commands::password_command_handler(Client* client, std::vector< To
 
 CommandResult Commands::message_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
-    if (args.size() < 4 || client->state != S_CONNECT) {
+    if (args.size() != 3 || client->state != S_CONNECT) {
         result.type = CMD_NO_RESULT;
         return result;
     }
     result.type = CMD_RESULT_BROADCAST;
     result.reply = args[1].data;
-    result.message.clear();
-    for (size_t i = 3; i < args.size(); i++) {
-        result.message += args[i].data;
-    }
+    result.message = args[2].data;
     return result;
 }
 
