@@ -8,6 +8,7 @@
 #endif
 
 #define IRC_NAME "burekserv"
+#define DATA_MAX 512
 
 #define ANSI_RED "\033[0;31m"
 #define ANSI_GREEN "\033[0;32m"

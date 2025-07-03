@@ -661,8 +661,6 @@ void Server::leave_channel(ClientIterator& client, CommandResult result) {
     if (!does_channel_exist(result.reply, i)) {
         return;
     }
-    if (i >= _channels.size())
-        return;
     if (_channels[i].users.count(client->first)) {
         std::string mess = ":" + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname
                            + " PART " + result.reply + " :leaving\r\n";
@@ -683,6 +681,11 @@ bool Server::handle_client_input(ClientIterator& client) {
     ssize_t bytes_read = recv(client->first, buffer.data(), buffer.size(), MSG_DONTWAIT);
 
     if (bytes_read <= 0) {
+        drop_client(client);
+        return false;
+    }
+
+    if (client->second.input.size() > DATA_MAX) {
         drop_client(client);
         return false;
     }
