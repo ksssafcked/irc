@@ -521,7 +521,9 @@ void Server::add_operator(ClientIterator& client, Channel& channel, CommandResul
 
     if (fd == -1 || fd == client->first)
         return;
-    if (result.message == "+o") {
+    else if (!channel.users.count(fd)) {
+        send_message(client->first, error_notonchannel(client->second.nickname, result.extra));
+    } else if (result.message == "+o") {
         channel.operators.insert(fd);
     } else {
         channel.operators.erase(fd);
@@ -685,15 +687,15 @@ void Server::leave_channel(ClientIterator& client, CommandResult result) {
 
 bool Server::handle_client_input(ClientIterator& client) {
 
-    char buffer[512];
-    ssize_t bytes_read = recv(client->first, buffer, sizeof(buffer), MSG_DONTWAIT);
+    std::vector< char > buffer(512);
+    ssize_t bytes_read = recv(client->first, buffer.data(), buffer.size(), MSG_DONTWAIT);
 
     if (bytes_read <= 0) {
         drop_client(client);
         return false;
     }
 
-    client->second.input.append(buffer, bytes_read);
+    client->second.input.append(buffer.data(), bytes_read);
 
     for (std::string::iterator it = client->second.input.begin(); it != client->second.input.end(); it++) {
         if (*it >= '\x01' && *it <= '\x07') {
@@ -727,6 +729,8 @@ bool Server::handle_client_input(ClientIterator& client) {
                 handle_nick(client, result);
             } else
                 send_to_all(client, result);
+        } else {
+            break;
         }
     }
     return true;
