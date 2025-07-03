@@ -72,29 +72,21 @@ void Server::run() {
                     continue;
                 std::string mess(buf, bytes - 1);
                 if (mess == "debug") {
-                    // Boucle principale sur le vecteur de canaux (ne change pas)
                     for (size_t i = 0; i < _channels.size(); ++i) {
                         std::cout << ANSI_RED << "Channel (" << (i + 1) << "): " << _channels[i].channel_name << "\n";
-
-                        // Déclaration d'un itérateur réutilisable
                         std::set< int >::const_iterator it;
 
-                        // Parcours du set d'utilisateurs
                         std::cout << "\tUsers (" << _channels[i].users.size() << "):\n ";
                         for (it = _channels[i].users.begin(); it != _channels[i].users.end(); ++it) {
                             int user_fd = *it;
                             std::cout << "\t\t- fd: " << user_fd << " (nick: " << _client_map[user_fd].nickname
                                       << ")\n";
                         }
-
-                        // Parcours du set d'opérateurs
                         std::cout << "\tOperators (" << _channels[i].operators.size() << "):\n ";
                         for (it = _channels[i].operators.begin(); it != _channels[i].operators.end(); ++it) {
                             int op_fd = *it;
                             std::cout << "\t\t- fd: " << op_fd << " (nick: " << _client_map[op_fd].nickname << ")\n";
                         }
-
-                        // Parcours du set d'invités
                         std::cout << "\tInvites (" << _channels[i].invites.size() << "):\n ";
                         for (it = _channels[i].invites.begin(); it != _channels[i].invites.end(); ++it) {
                             int invite_fd = *it;
@@ -238,16 +230,20 @@ void Server::send_to_all(ClientIterator& client, CommandResult result) {
         std::string mess;
         mess = ":" + client->second.nickname + "!" + client->second.username + "@" + client->second.hostname
                + " PRIVMSG " + result.reply + " :" + result.message + "\r\n";
-        for (size_t i = 0; i < _channels.size(); i++) {
-            if (_channels[i].channel_name != result.reply)
-                continue;
-            const std::set< int >& user_list = _channels[i].users;
-            std::set< int >::const_iterator it;
-            for (it = user_list.begin(); it != user_list.end(); it++) {
-                if (client->first != *it) {
-                    std::cout << ANSI_RED << mess << ANSI_RESET;
-                    send_message(*it, mess);
-                }
+        size_t i;
+
+        if (!does_channel_exist(result.reply, i))
+            return;
+        if (_channels[i].users.count(client->first)) {
+            send_message(client->first, error_notonchannel(client->second.nickname, result.reply));
+            return;
+        }
+        const std::set< int >& user_list = _channels[i].users;
+        std::set< int >::const_iterator it;
+        for (it = user_list.begin(); it != user_list.end(); it++) {
+            if (client->first != *it) {
+                std::cout << ANSI_RED << mess << ANSI_RESET;
+                send_message(*it, mess);
             }
         }
         std::size_t burek = result.message.find("burek");
