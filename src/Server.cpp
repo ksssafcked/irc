@@ -634,30 +634,24 @@ void Server::handle_nick(ClientIterator& client, CommandResult result) {
 
 void Server::topic_handle(ClientIterator& client, CommandResult result) {
     size_t i;
+    if (!does_channel_exist(result.reply, i))
+        return;
     if (result.message.empty()) {
-
+        std::string topic_reply = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " "
+                                  + _channels[i].channel_name + " :" + _channels[i].topic + "\r\n";
+        send_message(client->first, topic_reply);
     } else {
-        if (!does_channel_exist(result.reply, i)) {
-            // send_message(client->first, error_nosuchchannel(client->second.nickname, result.reply));
-            return;
-        } else if (_channels[i].users.count(client->first)) {
+        if (!_channels[i].users.count(client->first)) {
             send_message(client->first, error_notonchannel(client->second.nickname, _channels[i].channel_name));
         } else {
-            if (!_channels[i].perm_topic) {
+            if (_channels[i].perm_topic && !_channels[i].operators.count(client->first)) {
+                send_message(client->first, error_chanoprivsneeded(client->second.nickname, _channels[i].channel_name));
+            } else {
                 _channels[i].topic = result.message;
                 std::string mess = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
                 mess += result.reply + " :" + _channels[i].topic + "\r\n";
-                send_message(client->first, mess);
-            } else {
-                if (_channels[i].operators.count(client->first)) {
-                    _channels[i].topic = result.message;
-                    std::string mess = ":" + std::string(IRC_NAME) + " 332 " + client->second.nickname + " ";
-                    mess += result.reply + " :" + _channels[i].topic + "\r\n";
-                    send_message(client->first, mess);
-                } else {
-                    send_message(client->first,
-                                 error_chanoprivsneeded(client->second.nickname, _channels[i].channel_name));
-                }
+                for (std::set< int >::iterator it = _channels[i].users.begin(); it != _channels[i].users.end(); it++)
+                    send_message(*it, mess);
             }
         }
     }

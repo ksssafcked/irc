@@ -215,8 +215,8 @@ CommandResult Commands::topic_command_handler(Client* client, std::vector< Token
     } else {
         result.type = CMD_TOPIC;
         result.reply = args[1].data;
-        if (args.size() > 3)
-            result.message = args[3].data;
+        if (args.size() == 3)
+            result.message = args[2].data;
     }
     return (result);
 }
