@@ -234,7 +234,7 @@ void Server::send_to_all(ClientIterator& client, CommandResult result) {
 
         if (!does_channel_exist(result.reply, i))
             return;
-        if (_channels[i].users.count(client->first)) {
+        if (!_channels[i].users.count(client->first)) {
             send_message(client->first, error_notonchannel(client->second.nickname, result.reply));
             return;
         }
@@ -327,6 +327,8 @@ bool Server::add_user_to_channel(CommandResult result, int fd, int mode) {
         if (_channels[i].users.count(fd)) {
             return false;
         }
+        if (_channels[i].has_limit && _channels[i].users.size() == _channels[i].limit_user)
+            return false;
         if (!_channels[i].perm_invite) {
             if (_channels[i].invites.count(fd)) {
                 _channels[i].invites.erase(fd);
