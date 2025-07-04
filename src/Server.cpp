@@ -172,7 +172,7 @@ void Server::drop_client(ClientIterator& client) {
 
 void Server::send_message(int fd, std::string message) {
     send(fd, message.c_str(), message.length(), MSG_DONTWAIT);
-    std::cout << "[debug][server]: server sent to " << fd << ": [" << message << "]\n";
+    std::cout << "[info][server]: server sent to " << fd << ": [" << message << "]\n";
 }
 
 void Server::burek_to_all(std::string& channel) {
