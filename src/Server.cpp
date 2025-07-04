@@ -64,40 +64,6 @@ void Server::run() {
 
         // handle any clients
         for (size_t i = 1; i < _fds.size(); i++) {
-            if (i == 1 && (_fds[i].revents & POLLIN)) {
-                char buf[100];
-                int bytes = read(STDIN_FILENO, buf, 10);
-
-                if (bytes < 0)
-                    continue;
-                std::string mess(buf, bytes - 1);
-                if (mess == "debug") {
-                    for (size_t i = 0; i < _channels.size(); ++i) {
-                        std::cout << ANSI_RED << "Channel (" << (i + 1) << "): " << _channels[i].channel_name << "\n";
-                        std::set< int >::const_iterator it;
-
-                        std::cout << "\tUsers (" << _channels[i].users.size() << "):\n ";
-                        for (it = _channels[i].users.begin(); it != _channels[i].users.end(); ++it) {
-                            int user_fd = *it;
-                            std::cout << "\t\t- fd: " << user_fd << " (nick: " << _client_map[user_fd].nickname
-                                      << ")\n";
-                        }
-                        std::cout << "\tOperators (" << _channels[i].operators.size() << "):\n ";
-                        for (it = _channels[i].operators.begin(); it != _channels[i].operators.end(); ++it) {
-                            int op_fd = *it;
-                            std::cout << "\t\t- fd: " << op_fd << " (nick: " << _client_map[op_fd].nickname << ")\n";
-                        }
-                        std::cout << "\tInvites (" << _channels[i].invites.size() << "):\n ";
-                        for (it = _channels[i].invites.begin(); it != _channels[i].invites.end(); ++it) {
-                            int invite_fd = *it;
-                            std::cout << "\t\t- fd: " << invite_fd << " (nick: " << _client_map[invite_fd].nickname
-                                      << ")\n";
-                        }
-                    }
-                    std::cout << ANSI_RESET; // Remettre la couleur à la normale
-                }
-                continue;
-            }
             ClientIterator client = _client_map.find(_fds[i].fd);
             if (client == _client_map.end()) {
                 // NOTE: should never happen
@@ -141,7 +107,6 @@ bool Server::setup_socket() {
     }
 
     this->add_fd_to_poll(_socket, POLLIN);
-    this->add_fd_to_poll(STDIN_FILENO, POLLIN);
     return true;
 }
 
@@ -440,12 +405,10 @@ void Server::delete_user_from_channels(int fd) {
 
         _channels[i].delete_from_all(fd);
         if (_channels[i].users.size() == 0 || _channels[i].operators.size() == 0) {
-            std::cout << ANSI_RED << "Channel delete number: " << (i + 1) << "\n" << ANSI_RESET;
             kick_all_users_from_channel(_channels[i]);
             delete_channel(i);
         } else
             i++;
-        std::cout << ANSI_RED << "Channel size: " << _channels.size() << "\n" << ANSI_RESET;
     }
 }
 
@@ -472,7 +435,6 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
                 }
             }
             client->second.nickname = result.reply;
-            std::cout << "New nick !\n";
         } else { // check username and hostname
             for (ClientIterator clients = _client_map.begin(); clients != _client_map.end(); clients++) {
                 if (clients->first != client->first
@@ -483,7 +445,6 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
             }
             client->second.username = result.reply;
             client->second.hostname = result.message;
-            std::cout << "New username !\n";
         }
         if (client->second.state != S_CONNECT && all_info(client->second)) {
             client->second.state++;
@@ -491,7 +452,6 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
                                   + " :Welcome to the IRC network, " + client->second.nickname + "!"
                                   + client->second.username + "@" + client->second.hostname + "\r\n";
             send_message(client->first, message);
-            std::cout << "All info !\n";
         }
     }
 }

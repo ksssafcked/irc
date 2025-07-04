@@ -12,9 +12,9 @@ bool is_alphanumeric(char c) { return is_alpha(c) || is_digit(c); }
 
 bool is_underscore(char c) { return c == '-' || c == '_';}
 
-bool is_valid_first_nickname( char c) { return is_alphanumeric(c) || c == '-' || c == '[' || c ==']' || c == '\\';}
+bool is_valid_nickname( char c) { return is_alphanumeric(c) || c == '-' || c == '[' || c ==']' || c == '\\';}
 
-bool is_valid_nickname( char c) { return is_alpha(c) || c == '[' || c ==']' || c == '\\';}
+bool is_valid_first_nickname( char c) { return is_alpha(c) || c == '[' || c ==']' || c == '\\';}
 
 bool is_invalid(char c) { return c == ',' || c == ' ' || c == '\x07' || c == ':';}
 

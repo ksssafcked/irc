@@ -16,10 +16,6 @@ bool Client::process_input(CommandResult& result) {
         return false;
     }
 
-    for (TokenIterator itr = tokens.begin(); itr != tokens.end(); itr++) {
-        std::cout << "token(" << itr->kind << ", [" << itr->data << "]\n";
-    }
-
     if (!tokens.size()) {
         input.clear();
         return false;
@@ -29,15 +25,6 @@ bool Client::process_input(CommandResult& result) {
     if (result.type > CMD_NO_RESULT) {
         return true;
     } else {
-        if (result.type == CMD_RESULT_NOT_FOUND) {
-            std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' not found\n"
-                      << ANSI_RESET;
-        } else if (result.type == CMD_RESULT_FAILED) {
-            std::cout << ANSI_CYAN << "[debug][client]: command '" << tokens.begin()->data << "' failed\n"
-                      << ANSI_RESET;
-        } else if (result.type == CMD_NO_RESULT) {
-            std::cout << ANSI_CYAN << result.reply << ANSI_RESET;
-        }
         return false;
     }
 }
