@@ -46,3 +46,8 @@ std::string error_passwdmismatch(std::string nickname) {
     nickname = nickname.empty() ? "*" : nickname;
     return (":" + std::string(IRC_NAME) + " 464 " + nickname + " :password incorrect\r\n");
 }
+
+std::string error_erroneusnickname(std::string nickname, std::string to_change) {
+    nickname = nickname.empty() ? "*" : nickname;
+    return (":" + std::string(IRC_NAME) + " 432 " + nickname + " " + to_change + " :erroneus nickname\r\n");
+}

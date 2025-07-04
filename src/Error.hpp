@@ -13,3 +13,4 @@ std::string error_chanoprivsneeded(std::string nickname, std::string channel);
 std::string error_notregistered(std::string nickname);
 std::string error_nosuchserver(std::string nickname, std::string target);
 std::string error_passwdmismatch(std::string nickname);
+std::string error_erroneusnickname(std::string nickname, std::string to_change);

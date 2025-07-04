@@ -65,7 +65,8 @@ CommandResult Commands::nick_command_handler(Client* client, std::vector< Token 
         result.reply = error_needmoreparams(nick, "NICK");
     }
     else if (!utils::is_nickname(args[1].data)) {
-        result.type = CMD_NO_RESULT;
+        result.type = CMD_RESULT_REPLY;
+        result.reply = error_erroneusnickname(client->nickname, args[1].data);
     }
     else if (client->state == S_CONNECT) {
         result.type = CMD_CHANGE_NICK;
