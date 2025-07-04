@@ -27,6 +27,10 @@ bool is_channel(std::string s);
 bool is_alphanumeric(char c);
 bool is_underscore(char c);
 bool is_invalid(char c);
+bool is_valid_first_nickname( char c);
+bool is_valid_nickname( char c);
+bool is_nickname(std::string s);
+bool is_username(std::string s);
 template< typename T >
 T str_to_value(std::string str) {
     T value;

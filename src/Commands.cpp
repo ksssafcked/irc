@@ -37,8 +37,9 @@ CommandResult Commands::cap_command_handler(Client* client, std::vector< Token >
     CommandResult result;
 
     if (args.size() != 2 && args.size() != 3) {
-        result.type = CMD_NO_RESULT;
-        return result;
+        result.type = CMD_RESULT_REPLY;
+        std::string nick = !client->nickname.empty() ? client->nickname : "*";
+        result.reply = error_needmoreparams(nick, "CAP");
     } else if (args[1].data == "LS") {
         result.type = CMD_RESULT_REPLY;
         result.reply = "CAP * LS :\r\n";
@@ -52,10 +53,20 @@ CommandResult Commands::cap_command_handler(Client* client, std::vector< Token >
 
 CommandResult Commands::nick_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
-    if (args.size() != 2) {
+    
+    if (client->state < S_USER) {
+        result.type = CMD_RESULT_REPLY;
+        std::string nick = !client->nickname.empty() ? client->nickname : "*";
+        result.reply = error_notregistered(nick);
     }
-    if (client->state < S_USER)
+    else if (args.size() != 2) {
+        result.type = CMD_RESULT_REPLY;
+        std::string nick = !client->nickname.empty() ? client->nickname : "*";
+        result.reply = error_needmoreparams(nick, "NICK");
+    }
+    else if (!utils::is_nickname(args[1].data)) {
         result.type = CMD_NO_RESULT;
+    }
     else if (client->state == S_CONNECT) {
         result.type = CMD_CHANGE_NICK;
         result.reply = args[1].data;
@@ -69,8 +80,19 @@ CommandResult Commands::nick_command_handler(Client* client, std::vector< Token 
 CommandResult Commands::username_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
 
-    if (args.size() < 3 || client->state != S_USER)
+    if (client->state != S_USER) {
+        result.type = CMD_RESULT_REPLY;
+        std::string nick = !client->nickname.empty() ? client->nickname : "*";
+        result.reply = error_notregistered(nick);
+    }
+    else if (args.size() < 3) {
+        result.type = CMD_RESULT_REPLY;
+        std::string nick = !client->nickname.empty() ? client->nickname : "*";
+        result.reply = error_needmoreparams(nick, "USER");
+    }
+    else if (!utils::is_username(args[1].data) || !utils::is_username(args[2].data)) {
         result.type = CMD_NO_RESULT;
+    }
     else {
         result.type = CMD_CHECK_USER;
         result.reply = args[1].data;
@@ -81,8 +103,14 @@ CommandResult Commands::username_command_handler(Client* client, std::vector< To
 
 CommandResult Commands::password_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
-    if (args.size() != 2 || client->state != S_PASS) {
-        result.type = CMD_NO_RESULT;
+    if (client->state != S_PASS) {
+        result.type = CMD_RESULT_REPLY;
+        std::string nick = !client->nickname.empty() ? client->nickname : "*";
+        result.reply = error_notregistered(nick);
+    }
+    else if (args.size() != 2 ) {
+        result.type = CMD_RESULT_REPLY;
+        result.reply = error_needmoreparams("*", "PASS");
     } else {
         result.type = CMD_CHECK_PASS;
         result.reply = args[1].data;
@@ -135,8 +163,11 @@ CommandResult Commands::join_command_handler(Client* client, std::vector< Token 
 CommandResult Commands::quit_command_handler(Client* client, std::vector< Token >& args) {
     CommandResult result;
     (void)client;
-    if (args.size() != 3)
-        result.type = CMD_NO_RESULT;
+    if (args.size() != 3) {
+        result.type = CMD_RESULT_REPLY;
+        std::string nick = !client->nickname.empty() ? client->nickname : "*";
+        result.reply = error_needmoreparams(client->nickname, "QUIT");
+    }
     else {
         result.type = CMD_QUIT;
         result.reply = args[2].data;
