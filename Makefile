@@ -48,7 +48,7 @@ fclean:
 	@rm -rf $(BUILD_DIR)
 
 test: re
-	@./build/bin/ircserv 6667 42
+	@./build/bin/ircserv 8080 4242
 
 tests: re
 	@python3 ./test/test.py
@@ -56,6 +56,12 @@ tests: re
 irssi:
 	@docker build . -t irssi
 	@docker run -it --rm --network host irssi bash
+
+a:
+	irssi --connect=localhost -p 8080 -w 4242 --home=./test/user_a
+
+b:
+	irssi --connect=localhost -p 8080 -w 4242 --home=./test/user_b
 
 re: fclean all
 
