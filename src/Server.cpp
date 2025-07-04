@@ -291,7 +291,7 @@ void Server::send_join_message(Channel& channel, int fd) {
         send_message(*it, message);
     }
 
-    std::string topic = ": " + std::string(IRC_NAME) + " 332 " + _client_map[fd].nickname + " " + channel.channel_name
+    std::string topic = ":" + std::string(IRC_NAME) + " 332 " + _client_map[fd].nickname + " " + channel.channel_name
                         + " :" + channel.topic + "\r\n";
     send_message(fd, topic);
 
@@ -460,6 +460,7 @@ void Server::check_infos(ClientIterator& client, CommandResult result) {
         if (result.reply == this->_password) {
             client->second.state = S_USER; // TODO: send error to fd
         } else {
+            send_message(client->first, error_passwdmismatch(client->second.nickname));
         }
     } else {                        // if we check for username or nickname
         if (result.message.empty()) // check only nickname
@@ -675,6 +676,16 @@ void Server::leave_channel(ClientIterator& client, CommandResult result) {
     }
 }
 
+void Server::ping_user(ClientIterator& client, CommandResult result) {
+    std::string message;
+
+    if (result.reply != std::string(IRC_NAME))
+        message = error_nosuchserver(client->second.nickname, result.reply);
+    else
+        message = ":" + std::string(IRC_NAME) + " PONG " + std::string(IRC_NAME) + " :" + std::string(IRC_NAME) + "\r\n";
+    send_message(client->first, message);
+}
+
 bool Server::handle_client_input(ClientIterator& client) {
 
     std::vector< char > buffer(512);
@@ -722,6 +733,8 @@ bool Server::handle_client_input(ClientIterator& client) {
                 topic_handle(client, result);
             } else if (result.type == CMD_CHANGE_NICK) {
                 handle_nick(client, result);
+            } else if (result.type == CMD_PING) {
+                ping_user(client, result);
             } else
                 send_to_all(client, result);
         } else {

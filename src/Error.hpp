@@ -11,3 +11,5 @@ std::string error_useronchannel(std::string nickname, std::string target, std::s
 std::string error_needmoreparams(std::string nickname, std::string channel);
 std::string error_chanoprivsneeded(std::string nickname, std::string channel);
 std::string error_notregistered(std::string nickname);
+std::string error_nosuchserver(std::string nickname, std::string target);
+std::string error_passwdmismatch(std::string nickname);

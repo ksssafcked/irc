@@ -219,6 +219,18 @@ bool Client::tokenize_message(const std::string& message, std::vector< Token >& 
             return true;
         }
 
+        if (*it == '#') {
+            while (it != message.end() && *it != ' ') {
+                current_token += *it;
+                it++;
+                
+            }
+            if (!current_token.empty()) {
+                tokens.push_back(Token(TK_WORD, current_token));
+                current_token.clear();
+            }
+            continue;
+        }
         if (*it == ' ') {
             if (!current_token.empty()) {
                 tokens.push_back(Token(TK_WORD, current_token));

@@ -17,6 +17,7 @@ void Commands::register_commands() {
     _commands["MODE"] = Commands::mode_command_handler;
     _commands["TOPIC"] = Commands::topic_command_handler;
     _commands["PART"] = Commands::leave_command_handler;
+    _commands["PING"] = Commands::ping_command_handler;
 }
 
 CommandResult Commands::execute(const std::string& name, Client* client, std::vector< Token >& args) {
@@ -119,7 +120,8 @@ CommandResult Commands::join_command_handler(Client* client, std::vector< Token 
         result.type = CMD_RESULT_REPLY;
         result.reply = error_needmoreparams(client->nickname, "JOIN");
     } else if (!utils::is_channel(args[1].data)) {
-        result.type = CMD_NO_RESULT;
+        result.type = CMD_RESULT_REPLY;
+        result.reply = error_nosuchchannel(client->nickname, args[1].data);
     } else {
         result.type = CMD_CHANNEL;
         result.reply = args[1].data;
@@ -192,9 +194,10 @@ CommandResult Commands::invite_command_handler(Client* client, std::vector< Toke
     } else if (args.size() != 3) {
         result.type = CMD_RESULT_REPLY;
         result.reply = error_needmoreparams(client->nickname, "INVITE");
-    } else if (!utils::is_channel(args[2].data))
-        result.type = CMD_NO_RESULT;
-    else {
+    } else if (!utils::is_channel(args[2].data)) {
+        result.type = CMD_RESULT_REPLY;
+        result.reply = error_nosuchchannel(client->nickname, args[2].data);
+    } else {
         result.type = CMD_INVITE;
         result.reply = args[2].data;
         result.message = args[1].data;
@@ -233,6 +236,23 @@ CommandResult Commands::leave_command_handler(Client* client, std::vector< Token
         result.reply = error_needmoreparams(client->nickname, "PART");
     } else {
         result.type = CMD_LEAVE;
+        result.reply = args[1].data;
+    }
+    return result;
+}
+
+CommandResult Commands::ping_command_handler(Client* client, std::vector< Token >& args) {
+    CommandResult result;
+
+    if (client->state != S_CONNECT) {
+        result.type = CMD_RESULT_REPLY;
+        std::string nick = !client->nickname.empty() ? client->nickname : "*";
+        result.reply = error_notregistered(nick);
+    } else if (args.size() != 2) {
+        result.type = CMD_RESULT_REPLY;
+        result.reply = error_needmoreparams(client->nickname, "PING");
+    } else {
+        result.type = CMD_PING;
         result.reply = args[1].data;
     }
     return result;

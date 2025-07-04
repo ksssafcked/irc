@@ -26,6 +26,10 @@ std::string error_useronchannel(std::string nickname, std::string target, std::s
             + " :is already on channel\r\n");
 }
 
+std::string error_nosuchserver(std::string nickname, std::string target) {
+    return (":" + std::string(IRC_NAME) + " 402 " + nickname + " " + target + " :no such server\r\n");
+}
+
 std::string error_needmoreparams(std::string nickname, std::string command) {
     return (":" + std::string(IRC_NAME) + " 461 " + nickname + " " + command + " :not enough parameters\r\n");
 }
@@ -36,6 +40,11 @@ std::string error_chanoprivsneeded(std::string nickname, std::string channel) {
 
 std::string error_notregistered(std::string nickname) {
     return (":" + std::string(IRC_NAME) + " 451 " + nickname + " :you have not registered\r\n");
+}
+
+std::string error_passwdmismatch(std::string nickname) {
+    nickname = nickname.empty() ? "*" : nickname;
+    return (":" + std::string(IRC_NAME) + " 464 " + nickname + " :password incorrect\r\n");
 }
 
 /*std::string error_cannotsendtochan(std::string username, std::string channel) {

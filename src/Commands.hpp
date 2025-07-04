@@ -23,6 +23,7 @@ enum CommandResultType {
     CMD_CHANGE_NICK,
     CMD_KICK,
     CMD_TOPIC,
+    CMD_PING,
 };
 
 struct CommandResult {
@@ -54,4 +55,5 @@ private:
     static CommandResult topic_command_handler(Client* client, std::vector< Token >& args);
     static CommandResult invite_command_handler(Client* client, std::vector< Token >& args);
     static CommandResult leave_command_handler(Client* client, std::vector< Token >& args);
+    static CommandResult ping_command_handler(Client* client, std::vector< Token >& args);
 };

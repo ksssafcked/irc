@@ -25,7 +25,8 @@ bool is_alpha(char c);
 bool is_digit(char c);
 bool is_channel(std::string s);
 bool is_alphanumeric(char c);
-
+bool is_underscore(char c);
+bool is_invalid(char c);
 template< typename T >
 T str_to_value(std::string str) {
     T value;
