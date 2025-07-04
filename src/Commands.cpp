@@ -40,7 +40,7 @@ CommandResult Commands::cap_command_handler(Client* client, std::vector< Token >
         result.type = CMD_NO_RESULT;
         return result;
     } else if (args[1].data == "LS") {
-        result.type = CMD_RESULT_REPLY; // TODO: change this
+        result.type = CMD_RESULT_REPLY;
         result.reply = "CAP * LS :\r\n";
     } else if (args[1].data == "END") {
         result.type = CMD_NO_RESULT;

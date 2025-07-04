@@ -46,7 +46,3 @@ std::string error_passwdmismatch(std::string nickname) {
     nickname = nickname.empty() ? "*" : nickname;
     return (":" + std::string(IRC_NAME) + " 464 " + nickname + " :password incorrect\r\n");
 }
-
-/*std::string error_cannotsendtochan(std::string username, std::string channel) {
-    return (":" + std::string(IRC_NAME) + " 404 * " + username + " " + channel + " :Cannot send to channel\r\n");
-}*/
