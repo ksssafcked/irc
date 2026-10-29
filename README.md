@@ -114,7 +114,6 @@ PRIVMSG #general :Hello!
 | Target        | Description                                                          |
 | ------------- | -------------------------------------------------------------------- |
 | `make`        | Build the server into `build/bin/ircserv`                            |
-| `make debug`  | Build with debug logs enabled                                        |
 | `make a` / `make b` | Connect two preconfigured Irssi users to a server on port `8080` (password `4242`) |
 
 ## 🧩 My Contribution

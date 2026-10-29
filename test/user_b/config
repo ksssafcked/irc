@@ -1,4 +1,4 @@
 settings = {
-  core = { real_name = "User B"; user_name = "user-b"; nick = "user-b"; };
+  core = { real_name = "Julien"; user_name = "julien"; nick = "jul"; };
   "fe-text" = { actlist_sort = "refnum"; };
 };

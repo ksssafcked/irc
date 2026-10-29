@@ -3,10 +3,6 @@
 #include <sstream>
 #include "Error.hpp"
 
-#ifndef DEBUG
-    #define DEBUG 0
-#endif
-
 #define IRC_NAME "burekserv"
 #define DATA_MAX 512
 
